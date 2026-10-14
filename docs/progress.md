@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-14
+- 마지막 갱신: 2026-10-14 15:00 UTC (RxRx3-core 분할 1,257/1,584, JUMP 다운로드 약 66%)
 
 ## 세션 시작 방법
 
@@ -19,10 +19,11 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. JUMP-CP 다운로드 완료 확인 (manifest 1,149개, 누락 well 확인)
-2. Stage A 분할 완료 확인(RxRx1 완료, RxRx3-core 1,584 plates 진행 중) → JUMP-CP 분할(다운로드 완료 후)
-3. RxRx3-core well 역할 정의 확정(사용자) → Stage B(`scripts/make_crops.py`, `--dry-run`으로 수치 먼저 확인): QC → 샘플링 → crop zarr
-4. view 생성기 결정 사항: 중심 세포 핵 마스크의 11.5%가 세포 마스크 밖으로 일부 나온다(RxRx3 시험). S view에서 핵을 세포 안으로 자를지 정한다
+1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그. 특히 JUMP 분할(`pvil_seg_jump`) 로그에 Traceback이 없는지 본다. JUMP 읽기 경로(`readers._fovs_jump_cp`)는 source_4 plate 1개(`source_4__BR00121427`) 시험이 끝나기 전에 세션을 닫았으므로 결과를 확인해야 한다(`pvil_data/seg/jump_cp/source_4__BR00121427.cells.parquet` 존재 여부)
+2. RxRx3-core: `python scripts/preview_seg.py configs/preprocess/rxrx3_core.yaml`로 source별 통계·윤곽 확인 → `python scripts/make_crops.py configs/preprocess/rxrx3_core.yaml --dry-run`으로 역할 정의 수치 확인 → 원문(735 / 104,166)과 비교해 사용자와 역할 정의 확정 → Stage B
+3. RxRx1 Stage B: `python scripts/make_crops.py configs/preprocess/rxrx1.yaml` (역할 정의 확정됨). experiment별 QC 통과율을 보고한다
+4. JUMP-CP 분할 완료 후 같은 순서로 점검·Stage B
+5. view 생성기 결정 사항: 중심 세포 핵 마스크의 11.5%가 세포 마스크 밖으로 일부 나온다(RxRx3 시험). S view에서 핵을 세포 안으로 자를지 정한다
 
 ## 진행 중
 
@@ -48,6 +49,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | --- | --- | --- | --- |
 | `pvil_dl_jump` | `python scripts/download_jump.py configs/data/jump_cp.yaml` (1,149 plates, 약 2.8 TB → /tmp/pvil_raw) | `/home/genetics/yiombi/pvil_data/logs/download_jump_cp_20261014_1034.log` | 2026-10-14 10:34 UTC |
 | `pvil_seg` (창 s0–s15) | `scripts/run_segment_tmux.sh pvil_seg 16 12 configs/preprocess/rxrx1.yaml configs/preprocess/rxrx3_core.yaml` (GPU i%4, 프로세스당 CPU 스레드 12) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1229_shard{0..15}.log` | 2026-10-14 12:29 UTC (스레드 제한 후 재시작) |
+| `pvil_wait_jump` | `scripts/start_jump_segment_when_ready.sh` — JUMP 다운로드 DONE + RxRx3 분할 1,584 plates 확인 후 `pvil_seg` 종료, `run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` 실행 | `/home/genetics/yiombi/pvil_data/logs/wait_jump_segment.log`, 이후 `segment_<시각>_shard*.log` | 2026-10-14 15:00 UTC |
 
 ## 측정값
 
