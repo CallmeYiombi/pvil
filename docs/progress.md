@@ -46,7 +46,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
 | `pvil_dl_jump` | `python scripts/download_jump.py configs/data/jump_cp.yaml` (1,149 plates, 약 2.8 TB → /tmp/pvil_raw) | `/home/genetics/yiombi/pvil_data/logs/download_jump_cp_20261014_1034.log` | 2026-10-14 10:34 UTC |
-| `pvil_seg` (창 s0–s7) | `scripts/segment.py` RxRx1 → RxRx3-core, `--shard i/8`, GPU i%4 | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1111_shard{0..7}.log` | 2026-10-14 11:11 UTC |
+| `pvil_seg` (창 s0–s15) | `scripts/segment.py` RxRx1 → RxRx3-core, `--shard i/16`, GPU i%4 (GPU당 4개) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1139_shard{0..15}.log` | 2026-10-14 11:39 UTC (8개에서 16개로 재시작) |
 
 ## 측정값
 
@@ -59,6 +59,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | Cellpose-SAM `cpsam` 추론 (256², 합성) | 0.55 s, 가중치 bf16, SHA-256 일치 | 2026-10-14 | 실데이터 분할 비용은 Phase 0 데이터 처리에서 따로 측정 |
 | Cellpose-SAM 2회 + 매칭 (RxRx3-core 512²) | 0.62 s/FOV (plate 80 FOV ≈ 50 s) | 2026-10-14 | GPU 1장 1프로세스, 공유 상태 |
 | Cellpose-SAM 2회 (JUMP 1080²) | 1.7 s/FOV (핵 0.74 + 세포 0.94) | 2026-10-14 | 매칭 제외, 공유 상태 |
+| Stage A 실처리 (RxRx1 HepG2 512², 8 프로세스) | 2.2–2.3 s/FOV/프로세스, FOV당 세포 290–390 | 2026-10-14 | GPU 사용률 17–32%, CPU 후처리가 병목 → 16 프로세스로 재시작 |
 
 ## 이슈·블로커
 
