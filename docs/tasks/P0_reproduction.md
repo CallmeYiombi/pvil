@@ -44,6 +44,21 @@
 | 채널 수 | 5 또는 6 (JUMP-CP 5, RxRx 6) |
 | **본 연구 추가** | crop 안 **모든** 세포의 instance mask 저장(N view용). 원 FOV ID, plate, well, site, centroid 좌표, FOV 세포 수를 메타데이터로 저장 |
 
+### 3.1 원본 데이터 확인 결과 (2026-10-14)
+
+| 항목 | RxRx1 | RxRx3-core | JUMP-CP |
+| --- | --- | --- | --- |
+| 형식 | 512×512 uint8 PNG, `images/<exp>/Plate<k>/<well>_s<site>_w<ch>.png` | 512×512 uint8 JPEG 2000, parquet 35개, 키 `<exp>/Plate<k>/<well>_s1_<ch>` | 1080×1080 uint16 TIFF(source_4 기준), S3 키 구조 그대로 |
+| site / well | 2 | 1 | source별 4–9 (microscope_config) |
+| 커버리지 | 메타데이터 125,510 site 전부 6채널 | 222,601 wells 전부 6채널(CRISPR 126,900 포함) | 다운로드 중 (manifest로 확인) |
+| 색인 | `raw/rxrx1/image_index.parquet` | `raw/rxrx3_core/image_index.parquet` (shard·row group 위치) | `raw/jump_cp/manifests/*.json` |
+| 핵 채널 | w1 (몽타주로 확인) | ch1 (확인) | DNA (load_data 열 이름) |
+| 세포 경계 채널 | w3 = Phalloidin으로 가정. HepG2는 세포가 밀집해 시각적으로 불분명 **[확인 필요]** | ch3 = 액틴 섬유가 뚜렷해 Phalloidin으로 확인 | AGP (load_data 열 이름) |
+| 나머지 채널 | 염색 이름 미확인. README는 번호만 제공 | ch6에 핵소체 신호(RNA 계열로 보임), 나머지 미확정 | RNA, ER, Mito (열 이름) |
+| 주의 | — | JPEG 2000 압축 흔적이 저신호 채널(ch5)에서 계단 모양으로 보인다 | illum `.npy` 보관(사용 여부는 원문에 없음) |
+
+- 색인은 `scripts/index_raw.py {rxrx3_core|rxrx1}`로 다시 만든다. 분할 채널 라우팅: RxRx는 핵 = w1, 세포 = w3+w1. JUMP-CP는 핵 = DNA, 세포 = AGP+DNA.
+
 ---
 
 ## 4. 인코더·학습 사양 (부록 A.2)

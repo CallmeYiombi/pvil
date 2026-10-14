@@ -19,10 +19,8 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. RxRx3-core parquet 구조·JP2 디코딩·채널 순서 확인
-2. RxRx1 이미지 구조 확인 (`pvil_data/raw/rxrx1/rxrx1/images`, 압축 해제 완료)
-3. JUMP-CP 다운로드 완료 확인 (manifest 1,149개, 누락 well 확인)
-4. 분할·crop 파이프라인 (`src/pvil/data/`): Cellpose-SAM `cpsam`, 150×150 crop, 전체 instance mask, QC, 샘플링
+1. JUMP-CP 다운로드 완료 확인 (manifest 1,149개, 누락 well 확인)
+2. 분할·crop 파이프라인 (`src/pvil/data/`): Cellpose-SAM `cpsam`, 150×150 crop, 전체 instance mask, QC, 샘플링
 
 ## 진행 중
 
@@ -30,6 +28,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 완료
 
+- 2026-10-14 RxRx1·RxRx3-core 원본 확인: 형식, 메타데이터-이미지 1:1 커버리지, 핵·세포 채널 라우팅, 색인 (`P0_reproduction.md` §3.1, `scripts/index_raw.py`)
 - 2026-10-14 RxRx3-core 원본 다운로드 완료 (17.4 GB, 35 shard SHA-256 일치, `MANIFEST.json`)
 - 2026-10-14 JUMP-CP 근사 부분집합 확정(907 화합물, 28,003 wells, plate 1,149) + `scripts/download_jump.py`(source_4 plate 2개 시험: 176 MB/s, 파일 수 일치)
 - 2026-10-14 RxRx1 다운로드(49 GB, MD5 일치)와 압축 해제(753,060 파일) 완료
