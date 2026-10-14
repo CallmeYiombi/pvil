@@ -19,15 +19,17 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. 블로커 확인: CP-BG-Bench 아티팩트 공개 여부, JUMP-CP 부분집합 정의 (저자 문의, 사용자 진행)
-2. RxRx3-core 다운로드와 메타데이터 확인 (배치 키 "plate"). HF CDN 속도 문제가 있으므로 큰 파일은 병렬 range 다운로드 사용
+1. RxRx3-core 이미지 다운로드 완료 확인 (`MANIFEST.json`) → parquet 구조·JP2 디코딩 확인
+2. RxRx1 HepG2 다운로드 (rxrx.ai)
+3. JUMP-CP cpg0016 근사 부분집합 규칙 작성 (저자 문의 안 함)
 
 ## 진행 중
 
-- (없음)
+- RxRx3-core 원본 다운로드 (아래 실행 중인 작업)
 
 ## 완료
 
+- 2026-10-14 RxRx3-core 메타데이터·LICENSE 확인: 배치 키 plate = 1–9 해결, 라이선스 = Recursion EULA. 원문 well 수와의 차이는 미결 (`P0_reproduction.md` §2-3)
 - 2026-10-14 미결 사양 3건 확정 (`docs/decisions.md`): Harmony = harmonypy 0.2.0 + max_iter 100, Cellpose-SAM = `cpsam` v1, scIB Batch = 5개 평균. `src/pvil/eval/harmony.py`(수렴 반복 횟수·장치 기록) + `tests/test_harmony.py`
 - 2026-10-14 환경 구축 (`docs/tasks/P0_env_setup.md`): 독립 repo + GitHub push, uv 환경, 패키지 골격, `configs/base_cpbg.yaml`, `scripts/check_env.py`, `tests/test_env.py`(15 passed). 점검 결과는 아래 측정값
 - 2026-10-14 연구 계획 수립 (`docs/research_plan.md`)
@@ -36,6 +38,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
+| `pvil_dl_rxrx3` | `python scripts/download_hf.py configs/data/rxrx3_core.yaml` (17.4 GB) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx3_core_20261014_0909.log` | 2026-10-14 09:09 UTC |
 
 ## 측정값
 
@@ -51,5 +54,6 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 1. **GPU 공유:** `nvidia-smi`에 다른 프로세스가 여럿 보인다. 그중 `/opt/conda/bin/python3`(multiprocessing spawn 4개, GPU당 40–143 GB, 2026-09 말부터 실행)은 다른 사람이 사용량을 채우려고 올린 작업으로, 우리가 GPU를 쓰면 자원이 유동적으로 우리에게 할당된다(사용자 확인, 2026-10-14). 따라서 점유 메모리·사용률만 보고 GPU가 부족하다고 판단하지 않는다. 그 밖의 학습 작업(다른 사용자의 train_val.py, run_brca.py 등)은 실제 경합 대상이다. T를 잴 때는 측정 시점의 GPU 점유 상태를 함께 기록한다
 2. **HF CDN 속도:** 단일 연결이 약 45 KB/s로 떨어지는 파일이 있다(cpsam_v2 1.23 GB). 64분할 병렬 range 다운로드 + SHA-256 확인으로 해결
-3. CP-BG-Bench 아티팩트 미공개 (2026-10-14 기준)
-4. JUMP-CP 부분집합의 정확한 plate·화합물 목록이 원문에 없음
+3. CP-BG-Bench 아티팩트 미공개. 저자 문의는 하지 않기로 함 (2026-10-14)
+4. JUMP-CP 부분집합의 정확한 plate·화합물 목록이 원문에 없음 → 근사 규칙으로 진행
+5. RxRx3-core well 수 불일치: 원문 104,166 wells / 735 perturbation, 메타데이터 CRISPR 126,900 / 736

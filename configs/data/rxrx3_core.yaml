@@ -1,0 +1,13 @@
+# RxRx3-core 원본 다운로드 설정. 사용: python scripts/download_hf.py configs/data/rxrx3_core.yaml
+# 라이선스: Recursion Commercial End User License Agreement (CC 아님). 원본·파생 이미지는 외부에 재배포하지 않는다.
+repo_id: recursionpharma/rxrx3-core
+repo_type: dataset
+revision: 89aedc798bf33e6f51cc8c6363009d9ffed69e31   # 2026-06-15 수정본. 바꾸면 decisions.md에 기록
+out_dir: ${oc.env:PVIL_DATA}/raw/rxrx3_core
+include:
+  - metadata_rxrx3_core.csv
+  - README.md
+  - LICENSE
+  - data/train-*.parquet           # 이미지 (6채널 × 222,601 wells, 512×512 JP2), 35개, 17.4 GB
+segments_per_file: 32
+parallel: 16

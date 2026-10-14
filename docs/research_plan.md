@@ -217,11 +217,11 @@ L = L_task + λ_v·L_view + λ_n·L_null + λ_x·L_inv(z_x) + λ_c·L_inv(z_c)  
 | --- | --- | --- | --- | --- | --- |
 | JUMP-CP (cpg0016 부분집합) | 화합물 / U2OS | 28,003 / 1,466 | source 10개 / source_4 | 화합물 plate는 10개 source에 걸쳐 무작위화 | paired-view를 CC0로 재배포 예정 |
 | RxRx1 (HepG2) | siRNA / HepG2 | 12,581 / 1,108 | experiment 11개 / HEPG2-07 | siRNA 위치는 experiment·plate마다 무작위. 단 277개씩 묶인 4개 그룹은 항상 같은 plate에 함께 배치 | CC BY-NC-SA 4.0 (CP-BG-Bench는 CC BY-NC로 표기) |
-| RxRx3-core | CRISPR-KO / HUVEC | 104,166 / 735 | plate 9개 / plate 4 | 각 CRISPR 실험은 같은 perturbation 묶음을 9회 반복하며 plate마다 무작위화 | HF 카드에 명시 없음 [미확인] |
+| RxRx3-core | CRISPR-KO / HUVEC | 104,166 / 735 | plate 9개 / plate 4 | 각 CRISPR 실험은 같은 perturbation 묶음을 9회 반복하며 plate마다 무작위화 | Recursion Commercial EULA (HF `LICENSE`, CC 아님. 귀속 표기 필수, 신경과학 분야 사용 금지, 파생물 공유 시 동등 조건) |
 
 - wells·perturbation·배치 수는 CP-BG-Bench Table 4 기준(대조군 포함).
 - RxRx3-core 원 데이터: 222,601 wells, 유전자 736개(HF 카드는 735개), 화합물 1,674개 × 8 농도. 원본 2048×2048에서 512×512 중앙 crop, uint8, JPEG 2000 압축. 압축 손실이 배경 통계에 영향을 줄 수 있다.
-- RxRx3-core의 배치 키 "plate"는 실험 내 반복 번호(1–9)로 해석된다. 메타데이터의 plate 열은 1–48 범위이므로 Phase 0에서 확인한다 [미확인].
+- RxRx3-core의 배치 키 "plate"는 실험 내 반복 번호(1–9)다. CRISPR wells의 plate 열은 1–9이고 176개 gene 실험이 모두 1–9를 가진다. 1–48 범위는 화합물 실험이다 (2026-10-14 메타데이터로 확인).
 - RxRx1: 384-well plate의 내부 308 wells, well당 512×512 두 장, 6채널.
 
 ### 5.2 분할 프로토콜
@@ -449,10 +449,10 @@ CP-BG-Bench 아티팩트는 2026-10-14 기준 미공개다. (1) 제1저자에게
 
 ## 12. 착수 전 확인 항목
 
-- [ ] CP-BG-Bench 아티팩트 공개 여부와 시점 (제1저자 문의)
-- [ ] JUMP-CP 부분집합의 정확한 plate·화합물 목록
-- [ ] RxRx3-core 배치 키 "plate"의 정확한 의미
-- [ ] RxRx3-core 라이선스
+- [x] CP-BG-Bench 아티팩트: 저자 문의 안 함, 자체 구현 (2026-10-14 결정)
+- [ ] JUMP-CP 부분집합: 저자 문의 없이 공개 정보로 근사 규칙 작성 (G0는 "근사" 표기)
+- [x] RxRx3-core 배치 키 "plate" = 실험 내 plate 번호 1–9 (2026-10-14)
+- [x] RxRx3-core 라이선스 = Recursion Commercial EULA (2026-10-14). 파생물(학습된 모델 포함) 공유 시 동등 조건 적용 여부는 공개 전에 검토
 - [ ] JUMP-CP 화합물 표적·MoA 주석 가용성
 - [ ] CWA-MSN, ABRA 코드 공개 여부
 - [ ] SubCell 가중치 라이선스와 입력 사양
