@@ -30,7 +30,12 @@ model:
   backbone: vit_base_patch16_dinov3.lvd1689m
   embed_dim: 768
   channel_adapter: {type: conv1x1, bias: false, out_channels: 3, norm_init: imagenet}
-  lora: {r: 8, alpha: 16, dropout: 0.1, target_modules: [qkv, proj, fc1, fc2]}
+  lora:
+    r: 8
+    alpha: 16
+    dropout: 0.1
+    # transformer block 안의 attention·MLP projection만. "proj"만 쓰면 patch_embed.proj도 잡힌다
+    target_modules: 'blocks\.\d+\.(attn\.(qkv|proj)|mlp\.(fc1|fc2))'
   image_head: {type: geglu_mlp, layers: 2, skip: true, out_dim: 128}
   pert_head: {type: silu_mlp, layers: 2, skip: true, out_dim: 128}
   pert_embedding:

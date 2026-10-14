@@ -19,6 +19,8 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 from pvil.eval import run_info  # noqa: E402
 
+# "proj"만 쓰면 patch_embed.proj(Conv2d)까지 잡히므로 transformer block 안으로 제한한다
+LORA_TARGETS = r"blocks\.\d+\.(attn\.(qkv|proj)|mlp\.(fc1|fc2))"
 HOME_WATCH = ["~/.cache", "~/.cellpose", "~/.triton", "~/.local/share/uv", "~/.local/bin", "~/.config/matplotlib"]
 
 
@@ -52,14 +54,15 @@ def check_backbone_lora(batch: int = 64, n_channels: int = 6):
 
     dev = "cuda:0"
     backbone = timm.create_model("vit_base_patch16_dinov3.lvd1689m", pretrained=True, num_classes=0)
-    lora_cfg = LoraConfig(r=8, lora_alpha=16, lora_dropout=0.1, target_modules=["qkv", "proj", "fc1", "fc2"])
+    lora_cfg = LoraConfig(r=8, lora_alpha=16, lora_dropout=0.1, target_modules=LORA_TARGETS)
     backbone = get_peft_model(backbone, lora_cfg)
     adapter = torch.nn.Conv2d(n_channels, 3, kernel_size=1, bias=False)
     model = torch.nn.Sequential(adapter, backbone).to(dev)
 
     n_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
     n_total = sum(p.numel() for p in model.parameters())
-    lora_modules = sorted({n.split(".")[-2] for n, _ in backbone.named_modules() if n.endswith("lora_A")})
+    lora_names = [n for n, _ in backbone.named_modules() if n.endswith("lora_A")]
+    lora_modules = sorted({n.split(".")[-2] for n in lora_names})
 
     x = torch.randn(batch, n_channels, 224, 224, device=dev)
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=1e-4)
@@ -81,6 +84,8 @@ def check_backbone_lora(batch: int = 64, n_channels: int = 6):
         "trainable_params": n_train,
         "total_params": n_total,
         "lora_target_leaf_names": lora_modules,
+        "n_lora_modules": len(lora_names),
+        "lora_on_patch_embed": any("patch_embed" in n for n in lora_names),
         "batch": batch,
         "step_sec_median": round(step, 4),
         "images_per_sec": round(batch / step, 1),
