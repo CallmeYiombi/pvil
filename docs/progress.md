@@ -19,7 +19,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그. 특히 JUMP 분할(`pvil_seg_jump`) 로그에 Traceback이 없는지 본다. JUMP 읽기 경로(`readers._fovs_jump_cp`)는 source_4 plate 1개(`source_4__BR00121427`) 시험이 끝나기 전에 세션을 닫았으므로 결과를 확인해야 한다(`pvil_data/seg/jump_cp/source_4__BR00121427.cells.parquet` 존재 여부)
+1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그. 특히 JUMP 분할(`pvil_seg_jump`) 로그에 Traceback이 없는지 본다. JUMP 읽기 경로는 source_4 plate 1개(`source_4__BR00121427`)로 시험 완료: 387 FOV, FOV당 세포 중앙값 188, border_ok 71%
 2. RxRx3-core: `python scripts/preview_seg.py configs/preprocess/rxrx3_core.yaml`로 source별 통계·윤곽 확인 → `python scripts/make_crops.py configs/preprocess/rxrx3_core.yaml --dry-run`으로 역할 정의 수치 확인 → 원문(735 / 104,166)과 비교해 사용자와 역할 정의 확정 → Stage B
 3. RxRx1 Stage B: `python scripts/make_crops.py configs/preprocess/rxrx1.yaml` (역할 정의 확정됨). experiment별 QC 통과율을 보고한다
 4. JUMP-CP 분할 완료 후 같은 순서로 점검·Stage B
