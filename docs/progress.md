@@ -20,7 +20,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 ## 다음 할 일
 
 1. JUMP-CP 다운로드 완료 확인 (manifest 1,149개, 누락 well 확인)
-2. Stage A 분할 완료 확인(RxRx1 44 plates, RxRx3-core 1,584 plates) → JUMP-CP 분할(다운로드 완료 후)
+2. Stage A 분할 완료 확인(RxRx1 완료, RxRx3-core 1,584 plates 진행 중) → JUMP-CP 분할(다운로드 완료 후)
 3. RxRx3-core well 역할 정의 확정(사용자) → Stage B(`scripts/make_crops.py`, `--dry-run`으로 수치 먼저 확인): QC → 샘플링 → crop zarr
 4. view 생성기 결정 사항: 중심 세포 핵 마스크의 11.5%가 세포 마스크 밖으로 일부 나온다(RxRx3 시험). S view에서 핵을 세포 안으로 자를지 정한다
 
@@ -30,6 +30,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 완료
 
+- 2026-10-14 RxRx1 Stage A 완료: 44 plates, 27,094 FOV, 매칭 세포 431만. experiment별 FOV당 세포 중앙값 51–385(밀도 차이 최대 7.5배, 과분할 아님, 윤곽 확인). `scripts/preview_seg.py`, `pvil_data/seg/rxrx1/_preview/`. Stage B에서 experiment별 QC 통과율을 보고한다(핵/세포질 비율 QC가 밀집 experiment에 몰릴 수 있음)
 - 2026-10-14 Stage B 구현(`scripts/make_crops.py`) + RxRx3-core plate 2개 시험: 3,392 crops, 중앙 픽셀 = 중심 라벨 100%, crop당 세포 중앙값 15, 약 53 KB/crop (`pvil_data/crops/rxrx3_core_partial/`, 시험용)
 - 2026-10-14 분할 파이프라인(Stage A) 구현: `src/pvil/data/{readers,segment,qc_sample,crops}.py`, `scripts/segment.py`, 테스트 6개. RxRx3-core plate 2개 시험: 0.62 s/FOV, FOV당 약 90 세포, 윤곽 미리보기 확인 (`pvil_data/seg/rxrx3_core/_preview/`)
 - 2026-10-14 RxRx1·RxRx3-core 원본 확인: 형식, 메타데이터-이미지 1:1 커버리지, 핵·세포 채널 라우팅, 색인 (`P0_reproduction.md` §3.1, `scripts/index_raw.py`)
