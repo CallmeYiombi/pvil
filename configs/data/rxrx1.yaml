@@ -1,0 +1,13 @@
+# RxRx1 원본 다운로드 설정. 사용: python scripts/download_urls.py configs/data/rxrx1.yaml
+# 라이선스: CC BY-NC-SA 4.0. 원본·파생 이미지는 외부에 재배포하지 않는다.
+# 이미지 zip에는 4개 세포주(HUVEC, RPE, HepG2, U2OS)가 모두 들어 있다. E0는 HepG2, E5는 전체를 쓴다.
+out_dir: ${oc.env:PVIL_DATA}/raw/rxrx1
+files:
+  - url: https://storage.googleapis.com/rxrx/rxrx1/rxrx1-metadata.zip
+    size: 1333687
+    hash: md5:d36VnKC85aKqf5+dRWrufg==          # GCS x-goog-hash, last-modified 2020-08-04
+  - url: https://storage.googleapis.com/rxrx/rxrx1/rxrx1-images.zip
+    size: 49039640485
+    hash: md5:91/6k7kX6KguJ+DDorNCXw==
+segments_per_file: 128
+parallel: 16

@@ -12,6 +12,7 @@ import hashlib
 import json
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -55,9 +56,10 @@ def main():
     files = remote_files(cfg)
     total = sum(f["size"] for f in files)
     print(f"{len(files)} files, {total / 1e9:.2f} GB -> {out_dir}", flush=True)
-    done_bytes = 0
+    done = {"bytes": 0, "n": 0}
     t0 = time.time()
-    for i, f in enumerate(files, 1):
+
+    def fetch(f):
         dst = out_dir / f["path"]
         dst.parent.mkdir(parents=True, exist_ok=True)
         ok = dst.exists() and dst.stat().st_size == f["size"] and (f["sha256"] is None or sha256(dst) == f["sha256"])
@@ -68,9 +70,16 @@ def main():
                 subprocess.run(["bash", str(SEGDL), url(cfg, f["path"]), str(dst), str(f["size"]), f["sha256"],
                                 str(cfg.segments_per_file), str(cfg.parallel)], check=True)
         f["status"] = "skipped" if ok else "downloaded"
-        done_bytes += f["size"]
-        rate = done_bytes / max(time.time() - t0, 1) / 1e6
-        print(f"[{i}/{len(files)}] {f['status']:10s} {f['path']} ({done_bytes / 1e9:.2f}/{total / 1e9:.2f} GB, 평균 {rate:.1f} MB/s)", flush=True)
+        done["bytes"] += f["size"]
+        done["n"] += 1
+        rate = done["bytes"] / max(time.time() - t0, 1) / 1e6
+        print(f"[{done['n']}/{len(files)}] {f['status']:10s} {f['path']} "
+              f"({done['bytes'] / 1e9:.2f}/{total / 1e9:.2f} GB, 평균 {rate:.1f} MB/s)", flush=True)
+
+    # HF CDN은 연결 몇 개가 느려지는 꼬리 지연이 있어 파일 여러 개를 동시에 받는다
+    with ThreadPoolExecutor(max_workers=cfg.get("concurrent_files", 1)) as ex:
+        for fut in [ex.submit(fetch, f) for f in files]:
+            fut.result()
 
     manifest = {
         "repo_id": cfg.repo_id, "repo_type": cfg.repo_type, "revision": cfg.revision,

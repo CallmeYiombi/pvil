@@ -10,4 +10,5 @@ include:
   - LICENSE
   - data/train-*.parquet           # 이미지 (6채널 × 222,601 wells, 512×512 JP2), 35개, 17.4 GB
 segments_per_file: 32
-parallel: 16
+parallel: 8           # 파일당 연결 수
+concurrent_files: 6   # 동시에 받는 파일 수 (총 연결 48)

@@ -20,7 +20,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 ## 다음 할 일
 
 1. RxRx3-core 이미지 다운로드 완료 확인 (`MANIFEST.json`) → parquet 구조·JP2 디코딩 확인
-2. RxRx1 HepG2 다운로드 (rxrx.ai)
+2. RxRx1 다운로드 완료 확인 → zip 압축 해제, HepG2 experiment 11개 확인
 3. JUMP-CP cpg0016 근사 부분집합 규칙 작성 (저자 문의 안 함)
 
 ## 진행 중
@@ -38,7 +38,8 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_dl_rxrx3` | `python scripts/download_hf.py configs/data/rxrx3_core.yaml` (17.4 GB) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx3_core_20261014_0909.log` | 2026-10-14 09:09 UTC |
+| `pvil_dl_rxrx3` | `python scripts/download_hf.py configs/data/rxrx3_core.yaml` (17.4 GB) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx3_core_20261014_0916.log` | 2026-10-14 09:16 UTC (재시작, 파일 6개 동시) |
+| `pvil_dl_rxrx1` | `python scripts/download_urls.py configs/data/rxrx1.yaml` (49 GB zip, 4개 세포주) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx1_20261014_0911.log` | 2026-10-14 09:11 UTC |
 
 ## 측정값
 
@@ -57,3 +58,4 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 3. CP-BG-Bench 아티팩트 미공개. 저자 문의는 하지 않기로 함 (2026-10-14)
 4. JUMP-CP 부분집합의 정확한 plate·화합물 목록이 원문에 없음 → 근사 규칙으로 진행
 5. RxRx3-core well 수 불일치: 원문 104,166 wells / 735 perturbation, 메타데이터 CRISPR 126,900 / 736
+6. RxRx1 HepG2 well 수 불일치: 원문 12,581 wells / 1,108 perturbation, 메타데이터 13,547 wells(처리군 12,179 + 양성대조군 1,318 + 음성대조군 50) / siRNA 라벨 1,139. 분할·QC 뒤 재비교
