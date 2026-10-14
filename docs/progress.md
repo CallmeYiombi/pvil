@@ -20,7 +20,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 ## 다음 할 일
 
 1. RxRx3-core 이미지 다운로드 완료 확인 (`MANIFEST.json`) → parquet 구조·JP2 디코딩 확인
-2. RxRx1 다운로드 완료 확인 → zip 압축 해제, HepG2 experiment 11개 확인
+2. RxRx1 이미지 구조 확인 (`pvil_data/raw/rxrx1/rxrx1/images`, 압축 해제 완료)
 3. JUMP-CP cpg0016 근사 부분집합 규칙 작성 (저자 문의 안 함)
 
 ## 진행 중
@@ -29,6 +29,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 완료
 
+- 2026-10-14 RxRx1 다운로드(49 GB, MD5 일치)와 압축 해제(753,060 파일) 완료
 - 2026-10-14 RxRx3-core 메타데이터·LICENSE 확인: 배치 키 plate = 1–9 해결, 라이선스 = Recursion EULA. 원문 well 수와의 차이는 미결 (`P0_reproduction.md` §2-3)
 - 2026-10-14 미결 사양 3건 확정 (`docs/decisions.md`): Harmony = harmonypy 0.2.0 + max_iter 100, Cellpose-SAM = `cpsam` v1, scIB Batch = 5개 평균. `src/pvil/eval/harmony.py`(수렴 반복 횟수·장치 기록) + `tests/test_harmony.py`
 - 2026-10-14 환경 구축 (`docs/tasks/P0_env_setup.md`): 독립 repo + GitHub push, uv 환경, 패키지 골격, `configs/base_cpbg.yaml`, `scripts/check_env.py`, `tests/test_env.py`(15 passed). 점검 결과는 아래 측정값
@@ -39,7 +40,6 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
 | `pvil_dl_rxrx3` | `python scripts/download_hf.py configs/data/rxrx3_core.yaml` (17.4 GB) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx3_core_20261014_0916.log` | 2026-10-14 09:16 UTC (재시작, 파일 6개 동시) |
-| `pvil_dl_rxrx1` | `python scripts/download_urls.py configs/data/rxrx1.yaml` (49 GB zip, 4개 세포주) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx1_20261014_0911.log` | 2026-10-14 09:11 UTC |
 
 ## 측정값
 
