@@ -1,0 +1,22 @@
+# RxRx1 HepG2 분할·crop 설정. 사용: python scripts/segment.py configs/preprocess/rxrx1.yaml --shard 0/8
+dataset: rxrx1
+base: configs/base_cpbg.yaml
+raw_root: ${oc.env:PVIL_DATA}/raw/rxrx1
+
+wells:
+  filter: {cell_type: [HEPG2]}
+  source_col: experiment             # 배치 키 = experiment 11개
+  heldout_source: HEPG2-07
+  label_col: sirna
+  roles:                             # treatment siRNA 1,108개 = 원문 perturbation 수와 일치
+    perturbation: {well_type: [treatment]}
+    control: {well_type: [negative_control]}   # EMPTY. positive_control은 제외
+
+channels:
+  names: [w1, w2, w3, w4, w5, w6]
+  nucleus: w1                        # 몽타주로 확인
+  cell: w3                           # Phalloidin으로 가정 [확인 필요]
+
+sampling:
+  n_per_pert_source: 100
+  seed: 0

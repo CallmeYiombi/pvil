@@ -20,7 +20,8 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 ## 다음 할 일
 
 1. JUMP-CP 다운로드 완료 확인 (manifest 1,149개, 누락 well 확인)
-2. 분할·crop 파이프라인 (`src/pvil/data/`): Cellpose-SAM `cpsam`, 150×150 crop, 전체 instance mask, QC, 샘플링
+2. Stage A 분할 완료 확인(RxRx1 44 plates, RxRx3-core 1,584 plates) → JUMP-CP 분할(다운로드 완료 후)
+3. RxRx3-core well 역할 정의 확정(사용자) → Stage B(`scripts/make_crops.py`, 아직 미작성): QC → 샘플링 → crop zarr
 
 ## 진행 중
 
@@ -28,6 +29,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 완료
 
+- 2026-10-14 분할 파이프라인(Stage A) 구현: `src/pvil/data/{readers,segment,qc_sample,crops}.py`, `scripts/segment.py`, 테스트 6개. RxRx3-core plate 2개 시험: 0.62 s/FOV, FOV당 약 90 세포, 윤곽 미리보기 확인 (`pvil_data/seg/rxrx3_core/_preview/`)
 - 2026-10-14 RxRx1·RxRx3-core 원본 확인: 형식, 메타데이터-이미지 1:1 커버리지, 핵·세포 채널 라우팅, 색인 (`P0_reproduction.md` §3.1, `scripts/index_raw.py`)
 - 2026-10-14 RxRx3-core 원본 다운로드 완료 (17.4 GB, 35 shard SHA-256 일치, `MANIFEST.json`)
 - 2026-10-14 JUMP-CP 근사 부분집합 확정(907 화합물, 28,003 wells, plate 1,149) + `scripts/download_jump.py`(source_4 plate 2개 시험: 176 MB/s, 파일 수 일치)
@@ -42,6 +44,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
 | `pvil_dl_jump` | `python scripts/download_jump.py configs/data/jump_cp.yaml` (1,149 plates, 약 2.8 TB → /tmp/pvil_raw) | `/home/genetics/yiombi/pvil_data/logs/download_jump_cp_20261014_1034.log` | 2026-10-14 10:34 UTC |
+| `pvil_seg` (창 s0–s7) | `scripts/segment.py` RxRx1 → RxRx3-core, `--shard i/8`, GPU i%4 | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1111_shard{0..7}.log` | 2026-10-14 11:11 UTC |
 
 ## 측정값
 
@@ -52,6 +55,8 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | ViT-B/16 DINOv3 + LoRA(block 한정, 학습 파라미터 1,179,666), bf16 fwd+bwd | 0.105 s/step (batch 64, 약 609 img/s), peak 7.03 GB | 2026-10-14 | GPU 0, torch.compile 없음, 다른 작업과 GPU 공유 중에 잰 참고값 |
 | bf16 matmul (4096²) | GPU0 16 / GPU1 180 / GPU2 79 / GPU3 371 TFLOPS | 2026-10-14 | 1차 측정(GPU0 7 / GPU1 52 / GPU2 470 / GPU3 238)과 크게 다르다. 사용량 채우기 작업이 도는 상태라 우리 작업이 실제로 받을 성능과 다를 수 있다 |
 | Cellpose-SAM `cpsam` 추론 (256², 합성) | 0.55 s, 가중치 bf16, SHA-256 일치 | 2026-10-14 | 실데이터 분할 비용은 Phase 0 데이터 처리에서 따로 측정 |
+| Cellpose-SAM 2회 + 매칭 (RxRx3-core 512²) | 0.62 s/FOV (plate 80 FOV ≈ 50 s) | 2026-10-14 | GPU 1장 1프로세스, 공유 상태 |
+| Cellpose-SAM 2회 (JUMP 1080²) | 1.7 s/FOV (핵 0.74 + 세포 0.94) | 2026-10-14 | 매칭 제외, 공유 상태 |
 
 ## 이슈·블로커
 

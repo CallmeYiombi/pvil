@@ -1,0 +1,25 @@
+# JUMP-CP 근사 부분집합 분할·crop 설정. 사용: python scripts/segment.py configs/preprocess/jump_cp.yaml --shard 0/8
+dataset: jump_cp
+base: configs/base_cpbg.yaml
+raw_root: /tmp/pvil_raw/jump_cp/images          # overlay, configs/data/jump_cp.yaml의 raw_image_dir
+wells_csv: configs/data/jump_cp_wells.csv.gz
+load_data_cache: ${oc.env:PVIL_DATA}/raw/jump_cp/load_data
+s3: {bucket: cellpainting-gallery, prefix: cpg0016-jump}
+
+wells:
+  source_col: Metadata_Source
+  heldout_source: source_4
+  label_col: Metadata_InChIKey
+  roles:
+    perturbation: {role: [treatment]}
+    control: {role: [negcon]}         # DMSO
+
+channels:
+  names: [DNA, RNA, ER, AGP, Mito]
+  nucleus: DNA
+  cell: AGP
+  illum_correction: false             # 원문에 언급 없음. illum .npy는 보관만
+
+sampling:
+  n_per_pert_source: 100
+  seed: 0

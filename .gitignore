@@ -19,6 +19,8 @@ wandb/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+/.venv/
+/venv/
 
 # 개인 Claude Code 설정
 CLAUDE.local.md
