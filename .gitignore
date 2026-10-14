@@ -1,0 +1,25 @@
+# 데이터와 대용량 산출물
+data/
+*.zarr/
+*.h5
+*.npy
+*.npz
+*.pt
+*.ckpt
+*.safetensors
+
+# 결과 원본 (요약만 커밋)
+results/**
+!results/**/
+!results/**/summary.md
+
+# 로그와 캐시
+logs/
+wandb/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# 개인 Claude Code 설정
+CLAUDE.local.md
+.claude/settings.local.json
