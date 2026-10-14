@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-14 15:00 UTC (RxRx3-core 분할 1,257/1,584, JUMP 다운로드 약 66%)
+- 마지막 갱신: 2026-10-14 23:30 UTC (JUMP 다운로드 완료, RxRx3-core 분할 완료, JUMP 분할 851/1,149)
 
 ## 세션 시작 방법
 
@@ -27,10 +27,11 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 진행 중
 
-- JUMP-CP 원본 다운로드 (아래 실행 중인 작업)
+- JUMP-CP Stage A 분할 (아래 실행 중인 작업)
 
 ## 완료
 
+- 2026-10-14 16:23 JUMP-CP 원본 다운로드 완료(1,149 plates, 1,103,705 파일, 2.51 TB, 평균 120 MB/s) + RxRx3-core Stage A 완료(1,584 plates). `pvil_wait_jump`가 JUMP 분할을 자동 시작
 - 2026-10-14 RxRx1 Stage A 완료: 44 plates, 27,094 FOV, 매칭 세포 431만. experiment별 FOV당 세포 중앙값 51–385(밀도 차이 최대 7.5배, 과분할 아님, 윤곽 확인). `scripts/preview_seg.py`, `pvil_data/seg/rxrx1/_preview/`. Stage B에서 experiment별 QC 통과율을 보고한다(핵/세포질 비율 QC가 밀집 experiment에 몰릴 수 있음)
 - 2026-10-14 Stage B 구현(`scripts/make_crops.py`) + RxRx3-core plate 2개 시험: 3,392 crops, 중앙 픽셀 = 중심 라벨 100%, crop당 세포 중앙값 15, 약 53 KB/crop (`pvil_data/crops/rxrx3_core_partial/`, 시험용)
 - 2026-10-14 분할 파이프라인(Stage A) 구현: `src/pvil/data/{readers,segment,qc_sample,crops}.py`, `scripts/segment.py`, 테스트 6개. RxRx3-core plate 2개 시험: 0.62 s/FOV, FOV당 약 90 세포, 윤곽 미리보기 확인 (`pvil_data/seg/rxrx3_core/_preview/`)
@@ -47,9 +48,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_dl_jump` | `python scripts/download_jump.py configs/data/jump_cp.yaml` (1,149 plates, 약 2.8 TB → /tmp/pvil_raw) | `/home/genetics/yiombi/pvil_data/logs/download_jump_cp_20261014_1034.log` | 2026-10-14 10:34 UTC |
-| `pvil_seg` (창 s0–s15) | `scripts/run_segment_tmux.sh pvil_seg 16 12 configs/preprocess/rxrx1.yaml configs/preprocess/rxrx3_core.yaml` (GPU i%4, 프로세스당 CPU 스레드 12) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1229_shard{0..15}.log` | 2026-10-14 12:29 UTC (스레드 제한 후 재시작) |
-| `pvil_wait_jump` | `scripts/start_jump_segment_when_ready.sh` — JUMP 다운로드 DONE + RxRx3 분할 1,584 plates 확인 후 `pvil_seg` 종료, `run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` 실행 | `/home/genetics/yiombi/pvil_data/logs/wait_jump_segment.log`, 이후 `segment_<시각>_shard*.log` | 2026-10-14 15:00 UTC |
+| `pvil_seg_jump` (창 s0–s15) | `scripts/run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` (1,149 plates) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1623_shard{0..15}.log` | 2026-10-14 16:23 UTC (23:30 기준 851/1,149, Traceback 없음, 2.2–3.8 s/FOV) |
 
 ## 측정값
 
