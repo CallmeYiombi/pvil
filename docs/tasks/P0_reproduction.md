@@ -33,7 +33,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 분할 | Cellpose-SAM, 기본 파라미터. 핵 = DNA 채널, 세포 = AGP+DNA 또는 Phalloidin+DNA (데이터셋별 채널 라우팅) |
+| 분할 | Cellpose-SAM, 기본 파라미터. **가중치 = `cpsam`(v1, 2025-04) 고정, 정밀도는 cellpose 기본값 bf16** (2026-10-14 결정). `cpsam_v2`는 E8 마스크 강건성 실험의 추가 조건으로만 쓴다. 핵 = DNA 채널, 세포 = AGP+DNA 또는 Phalloidin+DNA (데이터셋별 채널 라우팅) |
 | 핵-세포 매칭 | 마스크 겹침으로 매칭. 매칭되지 않은 객체는 제거 |
 | crop | 세포 centroid 중심 150×150 px. centroid가 FOV 경계에서 75 px 이내면 제외 |
 | 리사이즈 | 224×224. 형광 채널은 bilinear, 마스크는 nearest |
@@ -73,14 +73,14 @@
 2. well 평균
 3. pycytominer로 ZCA-cor sphering (대조군 well에만 fit, 모든 well에 적용)
 4. PCA 50
-5. harmonypy 기본값 (θ = 2, λ = 1, σ = 0.1, max_iter 100). batch key: JUMP-CP source(10개), RxRx1 source(11개), RxRx3-core plate(9개). Harmony 후 재정규화 없음
+5. Harmony (θ = 2, λ = 1, σ = 0.1, max_iter 100). **구현 = `harmonypy==0.2.0` 고정. θ·λ·σ와 `max_iter_harmony=100`(원문 A.3의 명시값)을 명시적으로 넘기고, 나머지는 0.2.0 기본값을 쓴다. 실제 수렴 반복 횟수와 실행 장치를 결과에 저장한다. G0가 RxRx1 또는 JUMP-CP에서 어긋날 때만 `max_iter_harmony=10`으로 재실행해 비교한다** (2026-10-14 결정. 2.0.0부터 λ 기본값이 자동 추정이고, 2.1.0은 원 논문보다 늦게 배포됨). batch key: JUMP-CP source(10개), RxRx1 source(11개), RxRx3-core plate(9개). Harmony 후 재정규화 없음
 6. Harmony 전(`X_pca`)과 후(`X_pca_harmony`)를 모두 저장
 
 ### 5.2 평가
 
 - 대조군 well은 batch integration(scIB)을 제외한 모든 평가에서 뺀다.
 - **Replicate mAP:** copairs. positive = 다른 plate의 같은 perturbation well, negative = 같은 plate의 처리군–대조군 쌍. 같은 plate의 처리군–처리군 쌍은 reference-index 기능으로 제외. 처리군 well의 AP 평균 → perturbation별 mAP → macro 평균. 유의성: 순열 10,000회, α = 0.05, Benjamini-Hochberg.
-- **scIB:** Batch = iLISI, kBET, BRAS, graph connectivity, PCR comparison. Bio = cLISI, KMeans NMI, KMeans ARI, silhouette label, isolated labels. 각 성분 = 지표의 비가중 평균, Total = 0.4·Batch + 0.6·Bio. batch key는 위와 같고 label key = InChIKey(화합물) 또는 유전자 기호. **원문 부록 A.6 표는 Batch를 PCR 제외 4개 지표의 평균으로 표기한다.** 구현 패키지와 집계 방식을 확인해 decisions.md에 기록한다 [확인 필요].
+- **scIB:** Batch = iLISI, kBET, BRAS, graph connectivity, PCR comparison. Bio = cLISI, KMeans NMI, KMeans ARI, silhouette label, isolated labels. 각 성분 = 지표의 비가중 평균, Total = 0.4·Batch + 0.6·Bio. batch key는 위와 같고 label key = InChIKey(화합물) 또는 유전자 기호. **Batch = 5개 지표(iLISI, kBET, BRAS, graph connectivity, PCR comparison)의 비가중 평균** (2026-10-14 결정). 원문 Table A2·A3 수치를 검산하면 5개 평균과 일치하므로, A.6 캡션의 4개 표기는 오기로 본다. Harmony 전 평가에서는 PCR comparison = 0이다(기준이 자기 자신). 개별 지표 5개와 PCR 제외 4개 평균도 함께 저장한다. 구현 = scib-metrics 0.5.10. Bio의 NMI·ARI는 KMeans만 쓴다.
 - **CP feature prediction:** cp_measure로 세포별 특징 계산(강도·텍스처·granularity·radial distribution·radial Zernike × 채널 × 핵/세포질 마스크, 크기·모양·Zernike·Feret × 구획, 모든 채널 쌍의 Pearson·Manders fold·RWC) → well 평균 → NaN 비율 > 50% 특징과 대조군 분산 0 특징 제거 (원문 기준 데이터셋당 1,358–1,443개). 50차원 임베딩에서 multi-output ridge(α = 1). 임베딩 표준화는 학습 세트에만 fit. 학습 = 비대조군·비held-out well, 평가 = held-out 배치의 비대조군 well. 학습 세트 분산 < 1e-8 특징 제외. median Pearson r 보고.
 - **Cross-batch perturbation recall:** 쿼리 = held-out 배치의 비대조군 well, 갤러리 = 나머지 배치의 비대조군 well. 코사인 유사도, macro R@k (k = 1…10).
 

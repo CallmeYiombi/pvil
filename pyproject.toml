@@ -17,7 +17,7 @@ dependencies = [
     # 평가·후처리
     "copairs",
     "pycytominer",
-    "harmonypy",
+    "harmonypy==0.2.0",   # 2.x는 lamb 기본값이 자동 추정. decisions.md 2026-10-14
     "scanpy",
     "anndata",
     "scib-metrics",

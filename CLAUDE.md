@@ -73,6 +73,7 @@ data/                 원본·중간 산출물 (git 제외)
 - 세션 시작 시 GPU 확인:
   `nvidia-smi`
   `python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))"`
+- GPU는 공유 중이다. `nvidia-smi`의 `/opt/conda/bin/python3` 프로세스들은 사용량을 채우려고 올린 작업이라, 우리가 GPU를 쓰면 자원이 유동적으로 우리에게 할당된다. 점유 메모리만 보고 GPU가 부족하다고 판단하지 않는다. 다른 사람의 프로세스는 건드리지 않는다.
 - 학습은 bf16 mixed precision을 쓴다(CP-BG-Bench와 동일).
 - 1회 학습 비용 T(GPU-시간)를 E0에서 실측해 `docs/progress.md`에 기록한다. 계획서의 예산은 A100 기준 추정(T ≈ 2–5 GPU-시간)이므로 실측값으로 대체한다.
 - 서버는 재생성될 수 있다. 작업 상태는 auto memory가 아니라 이 저장소의 `docs/progress.md`와 git에 남긴다(auto memory는 머신 로컬이다).

@@ -95,7 +95,19 @@ def check_backbone_lora(batch: int = 64, n_channels: int = 6):
 
 
 def check_cellpose():
+    """config의 Cellpose-SAM 가중치(cpsam v1)를 SHA-256으로 확인하고 GPU 추론 1회."""
+    import hashlib
+
     from cellpose import models
+    from omegaconf import OmegaConf
+
+    seg = OmegaConf.load(REPO / "configs/base_cpbg.yaml").data.segmentation
+    weights = Path(os.environ["CELLPOSE_LOCAL_MODELS_PATH"]) / seg.pretrained_model
+    h = hashlib.sha256()
+    with open(weights, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 24), b""):
+            h.update(chunk)
+    assert h.hexdigest() == seg.weights_sha256, f"{weights} SHA-256 불일치"
 
     rng = np.random.default_rng(0)
     img = np.zeros((256, 256), np.float32)
@@ -104,11 +116,13 @@ def check_cellpose():
     for cy, cx in centers:
         img[(yy - cy) ** 2 + (xx - cx) ** 2 < 12**2] = 1.0
     img += rng.normal(0, 0.05, img.shape).astype(np.float32)
-    model = models.CellposeModel(gpu=True)
+    model = models.CellposeModel(gpu=True, pretrained_model=seg.pretrained_model, use_bfloat16=seg.use_bfloat16)
     t0 = time.perf_counter()
     masks, *_ = model.eval(img)
     return {
         "pretrained_model": str(getattr(model, "pretrained_model", "?")),
+        "weights_sha256_ok": True,
+        "weights_dtype": str(next(model.net.parameters()).dtype),
         "n_objects_found": int(masks.max()),
         "n_objects_drawn": len(centers),
         "eval_sec": round(time.perf_counter() - t0, 2),
@@ -139,7 +153,6 @@ def check_esm2():
 
 
 def check_postprocessing():
-    import harmonypy
     import pandas as pd
     from pycytominer.operations import Spherize
     from sklearn.decomposition import PCA
@@ -154,11 +167,15 @@ def check_postprocessing():
     sph = Spherize(method="ZCA-cor").fit(pd.DataFrame(x[ctrl], columns=cols))
     xs = sph.transform(pd.DataFrame(x, columns=cols))
     xp = PCA(50, random_state=0).fit_transform(np.asarray(xs))
-    ho = harmonypy.run_harmony(xp, pd.DataFrame({"batch": batch}), ["batch"], theta=2, lamb=1, sigma=0.1,
-                               max_iter_harmony=100, verbose=False, random_state=0)
-    z = np.asarray(ho.Z_corr)
-    z = z.T if z.shape[0] != n else z
-    return {"pca_shape": list(xp.shape), "harmony_shape": list(z.shape)}
+    from omegaconf import OmegaConf
+
+    from pvil.eval.harmony import run_harmony
+
+    hcfg = OmegaConf.load(REPO / "configs/base_cpbg.yaml").postprocess.harmony
+    z, info = run_harmony(xp, batch, theta=hcfg.theta, lamb=hcfg.lamb, sigma=hcfg.sigma,
+                          max_iter_harmony=hcfg.max_iter_harmony, random_state=hcfg.random_state)
+    return {"pca_shape": list(xp.shape), "harmony_shape": list(z.shape),
+            **{k: v for k, v in info.items() if k != "objective_harmony"}}
 
 
 def check_copairs():

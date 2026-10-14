@@ -16,7 +16,8 @@ paths:
 
 ## 고정 정의 (바꾸려면 사용자 승인 + decisions.md 기록)
 
-- 후처리: L2 → well 평균 → 대조군에 fit한 ZCA-cor sphering → PCA 50 → Harmony(harmonypy 기본값). 전후 모두 저장.
+- 후처리: L2 → well 평균 → 대조군에 fit한 ZCA-cor sphering → PCA 50 → Harmony(`harmonypy==0.2.0`, θ = 2, λ = 1, σ = 0.1, max_iter_harmony = 100, 나머지 0.2.0 기본값. 수렴 반복 횟수와 장치 기록). 전후 모두 저장. 구현은 `src/pvil/eval/harmony.py`.
+- scIB Batch: iLISI, kBET, BRAS, graph connectivity, PCR comparison 5개 비가중 평균. Harmony 전은 PCR = 0. 개별 지표와 PCR 제외 4개 평균도 저장.
 - 대조군 well은 scIB를 제외한 모든 평가에서 제외.
 - Cross-batch recall: 쿼리 = held-out 배치의 비대조군 well, 갤러리 = 다른 배치의 비대조군 well, 코사인, macro R@1…10.
 - Replicate mAP: copairs. positive = 다른 plate의 같은 perturbation, negative = 같은 plate의 처리군–대조군, 같은 plate 처리군 쌍 제외.

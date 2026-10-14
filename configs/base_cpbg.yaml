@@ -20,7 +20,11 @@ data:
     rxrx3_core: 200
   segmentation:
     model: cellpose_sam
-    pretrained_model: TODO        # cellpose 4.2.1.1 기본값은 cpsam_v2. 원문의 "기본 파라미터"가 cpsam인지 cpsam_v2인지 [확인 필요]
+    # cpsam = v1(2025-04, 원문이 인용한 Cellpose-SAM 프리프린트 모델). 모든 실험에서 같은 마스크를 쓴다.
+    # cpsam_v2(cellpose 4.2 기본값)는 E8 마스크 강건성 실험의 추가 조건으로만 쓴다. decisions.md 2026-10-14
+    pretrained_model: cpsam
+    weights_sha256: e1440429eb384f95afe32bcba6510f90d518eaedc917ede549bed6804004abe2
+    use_bfloat16: true            # cellpose 기본값. 실행 로그에 기록
   views:
     cd_patch_size: 22
     cd_patch_inset: 7
@@ -68,12 +72,16 @@ postprocess:
   steps: [l2, well_mean, zca_cor_on_controls, pca, harmony]
   pca_dim: 50
   harmony:
-    # 지시서 표기: "harmonypy 기본값 (θ=2, λ=1, σ=0.1, max_iter 100)".
-    # harmonypy 2.1.0의 max_iter_harmony 기본값은 10이라 표기와 다르다 [확인 필요]. 값은 명시적으로 넘긴다.
+    # harmonypy==0.2.0 고정. theta·lamb·sigma·max_iter_harmony만 명시하고 나머지는 0.2.0 기본값
+    # (max_iter_kmeans 20, epsilon_cluster 1e-5, epsilon_harmony 1e-4, device 자동). decisions.md 2026-10-14
+    package_version: 0.2.0
     theta: 2
     lamb: 1
     sigma: 0.1
-    max_iter_harmony: TODO
+    max_iter_harmony: 100         # 원문 A.3의 명시값. 실제 수렴 반복 횟수와 장치는 결과에 저장
+    random_state: 0
+    # G0가 RxRx1 또는 JUMP-CP에서 어긋날 때만 max_iter_harmony=10으로 재실행해 비교한다
+    fallback_max_iter_harmony: 10
   batch_key:
     jump_cp: source
     rxrx1: source
@@ -84,7 +92,10 @@ eval:
   map: {null_size: 10000, alpha: 0.05, fdr: benjamini_hochberg}
   scib:
     total_weights: {batch: 0.4, bio: 0.6}
-    batch_metrics: [ilisi_knn, kbet_per_label, bras, graph_connectivity, pcr_comparison]   # 원문 A.6 표는 PCR 제외 4개 평균 [확인 필요]
+    # Batch = 5개 지표의 비가중 평균. 원문 Table A2·A3 수치 검산 결과 5개 평균과 일치(A.6 캡션의 4개 표기는 오기)
+    batch_metrics: [ilisi_knn, kbet_per_label, bras, graph_connectivity, pcr_comparison]
+    pcr_comparison_pre_harmony: 0.0   # Harmony 전 평가는 기준이 자기 자신이므로 0
+    also_save: [individual_metrics, batch_mean_without_pcr]   # 개별 5개 지표와 PCR 제외 4개 평균도 저장
     bio_metrics: [clisi_knn, nmi_ari_cluster_labels_kmeans, silhouette_label, isolated_labels]
   cp_prediction: {ridge_alpha: 1.0, max_nan_frac: 0.5, min_train_var: 1.0e-8}
 
