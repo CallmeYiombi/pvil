@@ -215,7 +215,7 @@ L = L_task + λ_v·L_view + λ_n·L_null + λ_x·L_inv(z_x) + λ_c·L_inv(z_c)  
 
 | 데이터셋 | 교란 / 세포 | wells / perturbation | 배치 키 / 원 held-out | plate 레이아웃 | 라이선스 |
 | --- | --- | --- | --- | --- | --- |
-| JUMP-CP (cpg0016 부분집합) | 화합물 / U2OS | 28,003 / 1,466 | source 10개 / source_4 | 화합물 plate는 10개 source에 걸쳐 무작위화 | paired-view를 CC0로 재배포 예정 |
+| JUMP-CP (cpg0016 부분집합; 본 연구는 근사 부분집합 28,003 / 907, `docs/decisions.md` 2026-10-14) | 화합물 / U2OS | 28,003 / 1,466 | source 10개 / source_4 | 화합물 plate는 10개 source에 걸쳐 무작위화 | paired-view를 CC0로 재배포 예정 |
 | RxRx1 (HepG2) | siRNA / HepG2 | 12,581 / 1,108 | experiment 11개 / HEPG2-07 | siRNA 위치는 experiment·plate마다 무작위. 단 277개씩 묶인 4개 그룹은 항상 같은 plate에 함께 배치 | CC BY-NC-SA 4.0 (CP-BG-Bench는 CC BY-NC로 표기) |
 | RxRx3-core | CRISPR-KO / HUVEC | 104,166 / 735 | plate 9개 / plate 4 | 각 CRISPR 실험은 같은 perturbation 묶음을 9회 반복하며 plate마다 무작위화 | Recursion Commercial EULA (HF `LICENSE`, CC 아님. 귀속 표기 필수, 신경과학 분야 사용 금지, 파생물 공유 시 동등 조건) |
 
@@ -450,7 +450,7 @@ CP-BG-Bench 아티팩트는 2026-10-14 기준 미공개다. (1) 제1저자에게
 ## 12. 착수 전 확인 항목
 
 - [x] CP-BG-Bench 아티팩트: 저자 문의 안 함, 자체 구현 (2026-10-14 결정)
-- [ ] JUMP-CP 부분집합: 저자 문의 없이 공개 정보로 근사 규칙 작성 (G0는 "근사" 표기)
+- [x] JUMP-CP 부분집합: 근사 규칙 확정(907 화합물, 28,003 wells, `configs/data/jump_cp_wells.csv.gz`). G0는 "근사" 표기 (2026-10-14)
 - [x] RxRx3-core 배치 키 "plate" = 실험 내 plate 번호 1–9 (2026-10-14)
 - [x] RxRx3-core 라이선스 = Recursion Commercial EULA (2026-10-14). 파생물(학습된 모델 포함) 공유 시 동등 조건 적용 여부는 공개 전에 검토
 - [ ] JUMP-CP 화합물 표적·MoA 주석 가용성

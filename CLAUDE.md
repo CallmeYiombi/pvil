@@ -65,7 +65,7 @@ data/                 원본·중간 산출물 (git 제외)
 - 장시간 학습은 `tmux`로 띄우고, 세션 이름과 로그 경로를 `docs/progress.md`의 "실행 중인 작업" 표에 적는다.
 - 의미 있는 단위마다 git commit하고 `origin`(https://github.com/CallmeYiombi/pvil.git) `main`에 push한다. 결과 원본은 커밋하지 않고 `results/**/summary.md`만 커밋한다.
 - 커밋 메시지와 PR에 Claude 관련 문구, Co-Authored-By, 워터마크를 넣지 않는다.
-- `~/`(/home/jovyan)에 아무것도 저장하지 않는다. venv, 캐시, 모델 가중치, 데이터는 모두 `/home/genetics/yiombi/` 아래에 둔다. 작업 전에 `source scripts/env.sh`로 경로를 설정한다.
+- `~/`(/home/jovyan)에 아무것도 저장하지 않는다. venv, 캐시, 모델 가중치, 데이터는 모두 `/home/genetics/yiombi/` 아래에 둔다. 예외: 다시 받을 수 있는 대용량 원본 이미지(JUMP-CP)는 overlay `/tmp/pvil_raw/`에 둔다(서버 재생성 시 사라짐). 작업 전에 `source scripts/env.sh`로 경로를 설정한다.
 - 데이터는 150×150 crop과 instance mask만 저장하고, view는 학습 중에 생성한다. 모든 view를 저장하면 데이터셋당 약 1.8 TB가 된다.
 
 ## 환경 (B200 클라우드 서버)

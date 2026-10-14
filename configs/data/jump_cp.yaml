@@ -1,0 +1,30 @@
+# JUMP-CP(cpg0016) 근사 부분집합과 원본 다운로드 설정. decisions.md 2026-10-14.
+# 사용: python scripts/build_jump_subset.py configs/data/jump_cp.yaml
+#       python scripts/download_jump.py configs/data/jump_cp.yaml [--sources source_4]
+metadata:
+  repo_dir: /home/genetics/yiombi/PVIL/data/jump/jump_datasets   # github.com/jump-cellpainting/datasets
+  commit: "016e865"                                                # 2026-01-09
+  copy_to: ${oc.env:PVIL_DATA}/raw/jump_cp/metadata
+
+subset:
+  sources: [source_2, source_3, source_4, source_5, source_6, source_7, source_8, source_9, source_10, source_11]
+  plate_types: [COMPOUND, TARGET2]
+  target_plate_type: TARGET2
+  negcon_id: JCP2022_033924      # DMSO
+  min_sources: 6
+  cap_wells_per_compound_source: 4
+  total_wells: 28003             # 원문 Table 4 (대조군 포함)
+  seed: 0
+  held_out_source: source_4
+  wells_csv: configs/data/jump_cp_wells.csv.gz   # 고정된 정의 (커밋)
+  summary_json: ${oc.env:PVIL_DATA}/raw/jump_cp/subset_summary.json
+
+download:
+  bucket: cellpainting-gallery
+  prefix: cpg0016-jump
+  channels: [DNA, RNA, ER, AGP, Mito]   # 형광 5채널. 명시야는 받지 않는다
+  illum: true                           # 채널별 illumination correction .npy (원문에 사용 여부 없음, 보관만)
+  # overlay /tmp: 38 TB 여유, 서버 재생성 시 사라짐. S3에서 같은 명령으로 복구 가능
+  raw_image_dir: /tmp/pvil_raw/jump_cp/images
+  manifest_dir: ${oc.env:PVIL_DATA}/raw/jump_cp/manifests
+  max_workers: 64

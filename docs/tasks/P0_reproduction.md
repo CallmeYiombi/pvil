@@ -24,7 +24,7 @@
 ## 2. 블로커 (가장 먼저 처리)
 
 1. **원 저자 아티팩트:** 저자 문의는 하지 않는다(2026-10-14 결정). 부록 A.1–A.4 사양대로 자체 구현한다. 나중에 아티팩트가 공개되면 그때 비교·대체를 검토한다.
-2. **JUMP-CP 부분집합 정의 [원문 없음]:** 원문은 "cpg0016 부분집합, U2OS, 화합물 1,466개, source 10개, wells 28,003(대조군 포함)"만 밝힌다. 저자 문의는 하지 않으므로(2026-10-14 결정) 공개 정보로 근사 규칙을 만들어 decisions.md에 기록하고 진행한다. JUMP-CP의 G0 판정은 "근사"로 표기한다.
+2. **JUMP-CP 부분집합 정의 [원문 없음]:** 원문은 "cpg0016 부분집합, U2OS, 화합물 1,466개, source 10개, wells 28,003(대조군 포함)"만 밝힌다. 저자 문의는 하지 않으므로(2026-10-14 결정) 공개 정보로 근사 규칙을 만들어 진행한다. JUMP-CP의 G0 판정은 "근사"로 표기한다. **[근사 규칙 확정, 2026-10-14]** source_2–11, COMPOUND·TARGET2 plate, 화합물 = TARGET2 비대조군 293개 ∪ 6개 이상 source에 나오는 화합물 = 907개, (화합물, source)당 최대 4 wells(seed 0) = 처리군 19,706 + DMSO 8,297 = 28,003 wells, plate 1,149개, held-out source_4(1,339 wells, 쿼리 화합물 293). 정의 파일 `configs/data/jump_cp_wells.csv.gz`, 코드 `src/pvil/data/jump_subset.py`. source_4에는 COMPOUND plate가 없어 화합물이 TARGET2뿐이다.
 3. **RxRx3-core 배치 키 [해결, 2026-10-14]:** CRISPR wells(`perturbation_type == "CRISPR"`, 126,900개)의 `plate`는 1–9이고, 176개 gene 실험이 모두 plate 1–9를 가진다(1–48은 화합물 실험). 따라서 배치 = plate 번호(1–9)이고 held-out은 모든 CRISPR 실험의 plate 4 wells다. **미결:** 원문 well 수 104,166 / 735 perturbation과 맞는 well_type 조합이 없다(Query guides 76,629 / 734, 전체 126,900 / 736). 원문이 세포 수 등 추가 필터를 썼을 가능성이 있다. 분할·QC 뒤에 다시 비교한다.
 
 ---
@@ -162,7 +162,7 @@
 2. **데이터 다운로드.**
    - RxRx1: https://rxrx.ai 에서 HEPG2-01 ~ HEPG2-11 (6채널, 512×512, well당 2 sites)
    - RxRx3-core: Hugging Face `recursionpharma/rxrx3-core`. `metadata_rxrx3_core.csv`로 CRISPR wells를 고른다. 이미지 키는 뷰어 기준 `<experiment>/Plate<k>/<address>_s<site>_<channel>` 형태로 보인다 [확인 필요].
-   - JUMP-CP cpg0016: 블로커 2 해결 후. 저장 위치와 접근 방법 [확인 필요].
+   - JUMP-CP cpg0016: `s3://cellpainting-gallery/cpg0016-jump` 무인증. `scripts/download_jump.py`가 plate별 `load_data_with_illum.csv`로 선택 well의 모든 site × 형광 5채널 TIFF와 illum `.npy`를 받는다. 원본 약 2.8 TB는 overlay `/tmp/pvil_raw/jump_cp`(휘발성)에 둔다.
 3. **분할·crop·QC·샘플링** (`src/pvil/data/`). crop 내 전체 instance mask를 저장한다.
 4. **view 생성기** (`src/pvil/data/views.py`): C, S, CD, SD 구현, N과 B는 스텁. 단위 테스트:
    - S에서 마스크 밖 픽셀이 0인지 (DNA 채널은 핵 마스크 기준)
