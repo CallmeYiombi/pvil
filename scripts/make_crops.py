@@ -97,6 +97,8 @@ def main():
         "n_sources": int(tw.source.nunique()), **info, "n_crops": int(len(sampled)),
         "n_wells_with_crops": int(sampled.well_key.nunique()),
         "crops_heldout_batch": int(sampled.is_heldout_batch.sum()),
+        "qc_pass_rate_by_source": {str(k): round(float(v), 4) for k, v in keep.groupby(pool.source).mean().items()},
+        "qc_fail_by_criterion": {c: int((~pool[c].between(*bounds[c])).sum()) for c in bounds},
     }
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     if args.dry_run:

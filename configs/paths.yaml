@@ -10,3 +10,6 @@ cache_dir: /home/genetics/yiombi/hf_cache
 # overlay(/tmp): 38 TB 여유, 서버 재생성 시 사라짐. 원본 이미지 전용, S3 등에서 같은 명령으로 복구 가능
 raw_overlay_dir: /tmp/pvil_raw
 results_dir: results
+# 학습용 crop memmap 캐시(overlay, 휘발성). scripts/cache_crops.py로 crops_dir에서 다시 만든다
+crop_cache_dir: /tmp/pvil_cache
+pert_emb_dir: ${data_root}/pert_emb

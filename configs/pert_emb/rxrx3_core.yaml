@@ -1,0 +1,11 @@
+# RxRx3-core 유전자 ESM2 임베딩. 사용: python scripts/make_pert_embeddings.py configs/pert_emb/rxrx3_core.yaml
+# decisions.md 2026-10-14: reviewed 정규 서열, 1,022 aa 초과는 겹치는 창 가중 평균
+name: rxrx3_core_esm2
+preprocess_config: configs/preprocess/rxrx3_core.yaml
+model: facebook/esm2_t33_650M_UR50D
+window: 1022          # ESM2 최대 1,024 토큰 - BOS/EOS
+stride: 511           # 창 50% 겹침
+sources:              # MorphoShift 프로젝트에서 받아 둔 공개 자료 (sha256은 출력 json에 기록)
+  uniprot_fasta: /home/genetics/yiombi/PVIL/data/uniprot/UP000005640.fasta
+  uniprot_geneid_tsv: /home/genetics/yiombi/PVIL/data/uniprot/UP000005640_geneid.tsv
+  ncbi_gene_info: /home/genetics/yiombi/PVIL/data/context/ncbi/Homo_sapiens.gene_info.gz

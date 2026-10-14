@@ -8,7 +8,7 @@ wells:
   source_col: plate                  # 배치 키 = 실험 내 plate 번호 1–9
   heldout_source: "4"
   label_col: gene
-  roles:                             # [확인 필요] 원문 735 perturbation / 104,166 wells와 맞는 정의를 Stage B 전에 확정
+  roles:                             # 확정(decisions.md 2026-10-14). 나머지(Exon·양성대조군·EMPTY)는 exclude. 원문 735 / 104,166과의 차이는 결정 로그 참고
     perturbation: {well_type_label: [Query guides]}
     control: {well_type_label: [Intron controls]}
 
