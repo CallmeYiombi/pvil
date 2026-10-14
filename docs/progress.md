@@ -46,7 +46,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
 | `pvil_dl_jump` | `python scripts/download_jump.py configs/data/jump_cp.yaml` (1,149 plates, 약 2.8 TB → /tmp/pvil_raw) | `/home/genetics/yiombi/pvil_data/logs/download_jump_cp_20261014_1034.log` | 2026-10-14 10:34 UTC |
-| `pvil_seg` (창 s0–s15) | `scripts/segment.py` RxRx1 → RxRx3-core, `--shard i/16`, GPU i%4 (GPU당 4개) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1139_shard{0..15}.log` | 2026-10-14 11:39 UTC (8개에서 16개로 재시작) |
+| `pvil_seg` (창 s0–s15) | `scripts/run_segment_tmux.sh pvil_seg 16 12 configs/preprocess/rxrx1.yaml configs/preprocess/rxrx3_core.yaml` (GPU i%4, 프로세스당 CPU 스레드 12) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1229_shard{0..15}.log` | 2026-10-14 12:29 UTC (스레드 제한 후 재시작) |
 
 ## 측정값
 
@@ -64,8 +64,9 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 ## 이슈·블로커
 
 1. **GPU 공유:** `nvidia-smi`에 다른 프로세스가 여럿 보인다. 그중 `/opt/conda/bin/python3`(multiprocessing spawn 4개, GPU당 40–143 GB, 2026-09 말부터 실행)은 다른 사람이 사용량을 채우려고 올린 작업으로, 우리가 GPU를 쓰면 자원이 유동적으로 우리에게 할당된다(사용자 확인, 2026-10-14). 따라서 점유 메모리·사용률만 보고 GPU가 부족하다고 판단하지 않는다. 그 밖의 학습 작업(다른 사용자의 train_val.py, run_brca.py 등)은 실제 경합 대상이다. T를 잴 때는 측정 시점의 GPU 점유 상태를 함께 기록한다
-2. **HF CDN 속도:** 단일 연결이 약 45 KB/s로 떨어지는 파일이 있다(cpsam_v2 1.23 GB). 64분할 병렬 range 다운로드 + SHA-256 확인으로 해결
-3. CP-BG-Bench 아티팩트 미공개. 저자 문의는 하지 않기로 함 (2026-10-14)
-4. JUMP-CP는 근사 부분집합(화합물 907 vs 원문 1,466). G0는 "근사" 표기
-5. RxRx3-core well 수 불일치: 원문 104,166 wells / 735 perturbation, 메타데이터 CRISPR 126,900 / 736
-6. RxRx1 HepG2 well 수 불일치: 원문 12,581 wells / 1,108 perturbation, 메타데이터 13,547 wells(처리군 12,179 + 양성대조군 1,318 + 음성대조군 50) / siRNA 라벨 1,139. 분할·QC 뒤 재비교
+2. **CPU 스레드 경합(해결):** torch가 프로세스마다 CPU 스레드 144개를 잡아, 분할 프로세스 8–16개가 288코어에서 경합했다(같은 FOV가 2–18초). `OMP_NUM_THREADS` 등을 12로 제한해 재시작. 여러 프로세스를 띄울 때는 항상 스레드 수를 제한한다
+3. **HF CDN 속도:** 단일 연결이 약 45 KB/s로 떨어지는 파일이 있다(cpsam_v2 1.23 GB). 64분할 병렬 range 다운로드 + SHA-256 확인으로 해결
+4. CP-BG-Bench 아티팩트 미공개. 저자 문의는 하지 않기로 함 (2026-10-14)
+5. JUMP-CP는 근사 부분집합(화합물 907 vs 원문 1,466). G0는 "근사" 표기
+6. RxRx3-core well 수 불일치: 원문 104,166 wells / 735 perturbation, 메타데이터 CRISPR 126,900 / 736
+7. RxRx1 HepG2 well 수 불일치: 원문 12,581 wells / 1,108 perturbation, 메타데이터 13,547 wells(처리군 12,179 + 양성대조군 1,318 + 음성대조군 50) / siRNA 라벨 1,139. 분할·QC 뒤 재비교
