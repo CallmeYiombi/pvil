@@ -1,0 +1,89 @@
+# CP-BG-Bench(arXiv 2609.12761) A1 재현 기본 설정. 출처: docs/tasks/P0_reproduction.md §3–5 (부록 A.1–A.4).
+# 원문에 없는 값은 TODO로 둔다. 임의로 채우지 말고 decisions.md에 선택과 근거를 기록한 뒤 바꾼다.
+defaults:
+  paths: configs/paths.yaml
+
+protocol: P-orig            # E0 재현만 P-orig. 주 프로토콜은 P-strict
+seed: 0
+
+data:
+  crop_size: 150
+  input_size: 224
+  border_exclusion_px: 75
+  resize_image: bilinear
+  resize_mask: nearest
+  qc_quantiles: [0.025, 0.975]   # 핵 면적, 세포질 면적, 핵/세포질 비율
+  sampling: uniform_per_compound_source
+  cells_per_pert_source:
+    jump_cp: 100
+    rxrx1: 100
+    rxrx3_core: 200
+  segmentation:
+    model: cellpose_sam
+    pretrained_model: TODO        # cellpose 4.2.1.1 기본값은 cpsam_v2. 원문의 "기본 파라미터"가 cpsam인지 cpsam_v2인지 [확인 필요]
+  views:
+    cd_patch_size: 22
+    cd_patch_inset: 7
+    cd_n_patches: 4
+
+model:
+  backbone: vit_base_patch16_dinov3.lvd1689m
+  embed_dim: 768
+  channel_adapter: {type: conv1x1, bias: false, out_channels: 3, norm_init: imagenet}
+  lora: {r: 8, alpha: 16, dropout: 0.1, target_modules: [qkv, proj, fc1, fc2]}
+  image_head: {type: geglu_mlp, layers: 2, skip: true, out_dim: 128}
+  pert_head: {type: silu_mlp, layers: 2, skip: true, out_dim: 128}
+  pert_embedding:
+    compound: {type: ecfp4, radius: 2, n_bits: 2048, chirality: true, transform: log1p_count}
+    gene: {model: facebook/esm2_t33_650M_UR50D, pooling: token_mean, dim: 1280}
+    control: mean_of_all
+
+loss:
+  type: multi_positive_infonce_symmetric
+  tau_init: 0.1
+  tau_clamp: [0.01, 100]
+
+train:
+  batch_size: 512
+  perts_per_batch: 64
+  samples_per_pert: 8
+  stratify_by_batch: true
+  include_controls_every_batch: true
+  optimizer: {type: adamw, betas: [0.9, 0.95]}
+  lr: {head: 3.0e-4, lora: 1.0e-4, tau: 1.0e-5}
+  weight_decay: {head: 5.0e-4, lora: 0.0, tau: 0.0}
+  schedule: {type: cosine, warmup_frac: 0.1}
+  precision: bf16
+  grad_clip: 5.0
+  max_epochs: 25
+  early_stopping: {patience: 5, monitor: val_macro_img2pert_r1}
+  augment: {hflip: true, vflip: true, rotate_deg: [0, 90], brightness: 0.1, contrast: 0.1}
+
+postprocess:
+  steps: [l2, well_mean, zca_cor_on_controls, pca, harmony]
+  pca_dim: 50
+  harmony:
+    # 지시서 표기: "harmonypy 기본값 (θ=2, λ=1, σ=0.1, max_iter 100)".
+    # harmonypy 2.1.0의 max_iter_harmony 기본값은 10이라 표기와 다르다 [확인 필요]. 값은 명시적으로 넘긴다.
+    theta: 2
+    lamb: 1
+    sigma: 0.1
+    max_iter_harmony: TODO
+  batch_key:
+    jump_cp: source
+    rxrx1: source
+    rxrx3_core: plate
+
+eval:
+  recall_k: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  map: {null_size: 10000, alpha: 0.05, fdr: benjamini_hochberg}
+  scib:
+    total_weights: {batch: 0.4, bio: 0.6}
+    batch_metrics: [ilisi_knn, kbet_per_label, bras, graph_connectivity, pcr_comparison]   # 원문 A.6 표는 PCR 제외 4개 평균 [확인 필요]
+    bio_metrics: [clisi_knn, nmi_ari_cluster_labels_kmeans, silhouette_label, isolated_labels]
+  cp_prediction: {ridge_alpha: 1.0, max_nan_frac: 0.5, min_train_var: 1.0e-8}
+
+held_out:
+  jump_cp: source_4
+  rxrx1: HEPG2-07
+  rxrx3_core: 4

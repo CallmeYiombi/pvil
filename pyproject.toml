@@ -1,0 +1,63 @@
+[project]
+name = "pvil"
+version = "0.0.1"
+description = "Paired-View Interventional Learning for Cell Painting"
+requires-python = "==3.11.*"
+dependencies = [
+    # 학습
+    "torch==2.9.1",
+    "torchvision",
+    "timm>=1.0.20",
+    "peft",
+    "transformers",
+    "huggingface_hub",
+    # 분할·특징
+    "cellpose>=4",
+    "cp_measure",
+    # 평가·후처리
+    "copairs",
+    "pycytominer",
+    "harmonypy",
+    "scanpy",
+    "anndata",
+    "scib-metrics",
+    "scikit-learn",
+    # perturbation 임베딩
+    "rdkit",
+    # 데이터 I/O
+    "numpy",
+    "pandas",
+    "polars",
+    "pyarrow",
+    "zarr",
+    "tifffile",
+    "imagecodecs",
+    "boto3",
+    # 설정
+    "omegaconf",
+]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pvil"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }
+torchvision = { index = "pytorch-cu130" }
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

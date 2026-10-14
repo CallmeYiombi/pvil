@@ -1,5 +1,5 @@
 # 데이터와 대용량 산출물
-data/
+/data/
 *.zarr/
 *.h5
 *.npy
@@ -23,3 +23,6 @@ __pycache__/
 # 개인 Claude Code 설정
 CLAUDE.local.md
 .claude/settings.local.json
+
+# gpfs 데이터 루트 심볼릭 링크
+/data

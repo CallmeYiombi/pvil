@@ -1,0 +1,9 @@
+# 경로 설정. 코드에 경로를 하드코딩하지 않고 이 파일을 읽는다.
+# 모두 /home/genetics/yiombi 아래 (~/ 사용 금지). repo의 data/는 data_root에 대한 심볼릭 링크다.
+data_root: /home/genetics/yiombi/pvil_data
+raw_dir: ${data_root}/raw
+crops_dir: ${data_root}/crops
+ckpt_dir: ${data_root}/ckpt
+embeddings_dir: ${data_root}/embeddings
+cache_dir: /home/genetics/yiombi/hf_cache
+results_dir: results
