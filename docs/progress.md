@@ -19,17 +19,18 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. RxRx3-core 이미지 다운로드 완료 확인 (`MANIFEST.json`) → parquet 구조·JP2 디코딩 확인
+1. RxRx3-core parquet 구조·JP2 디코딩·채널 순서 확인
 2. RxRx1 이미지 구조 확인 (`pvil_data/raw/rxrx1/rxrx1/images`, 압축 해제 완료)
 3. JUMP-CP 다운로드 완료 확인 (manifest 1,149개, 누락 well 확인)
 4. 분할·crop 파이프라인 (`src/pvil/data/`): Cellpose-SAM `cpsam`, 150×150 crop, 전체 instance mask, QC, 샘플링
 
 ## 진행 중
 
-- RxRx3-core shard 0 재다운로드, JUMP-CP 원본 다운로드 (아래 실행 중인 작업)
+- JUMP-CP 원본 다운로드 (아래 실행 중인 작업)
 
 ## 완료
 
+- 2026-10-14 RxRx3-core 원본 다운로드 완료 (17.4 GB, 35 shard SHA-256 일치, `MANIFEST.json`)
 - 2026-10-14 JUMP-CP 근사 부분집합 확정(907 화합물, 28,003 wells, plate 1,149) + `scripts/download_jump.py`(source_4 plate 2개 시험: 176 MB/s, 파일 수 일치)
 - 2026-10-14 RxRx1 다운로드(49 GB, MD5 일치)와 압축 해제(753,060 파일) 완료
 - 2026-10-14 RxRx3-core 메타데이터·LICENSE 확인: 배치 키 plate = 1–9 해결, 라이선스 = Recursion EULA. 원문 well 수와의 차이는 미결 (`P0_reproduction.md` §2-3)
@@ -41,7 +42,6 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_dl_rxrx3` | `python scripts/download_hf.py configs/data/rxrx3_core.yaml` (17.4 GB) | `/home/genetics/yiombi/pvil_data/logs/download_rxrx3_core_20261014_1035.log` | 2026-10-14 10:35 UTC (shard 0 재다운로드) |
 | `pvil_dl_jump` | `python scripts/download_jump.py configs/data/jump_cp.yaml` (1,149 plates, 약 2.8 TB → /tmp/pvil_raw) | `/home/genetics/yiombi/pvil_data/logs/download_jump_cp_20261014_1034.log` | 2026-10-14 10:34 UTC |
 
 ## 측정값
