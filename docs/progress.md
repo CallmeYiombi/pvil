@@ -85,3 +85,4 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 5. JUMP-CP는 근사 부분집합(화합물 907 vs 원문 1,466). G0는 "근사" 표기
 6. RxRx3-core well 수 불일치: 원문 104,166 wells / 735 perturbation, 메타데이터 CRISPR 126,900 / 736
 7. RxRx1 HepG2 well 수 불일치: 원문 12,581 wells / 1,108 perturbation, 메타데이터 13,547 wells(처리군 12,179 + 양성대조군 1,318 + 음성대조군 50) / siRNA 라벨 1,139. 분할·QC 뒤 재비교
+8. RxRx1 sphering: 대조군(EMPTY) well이 50개뿐인데 임베딩은 128차원이라, 대조군 공분산의 계수(rank)가 ≤ 49다. ZCA-cor(epsilon 1e-6)가 대조군에서 분산이 없는 방향을 크게 키울 수 있다. 원문 사양대로 진행하되, G0가 어긋나면 이것을 먼저 진단한다
