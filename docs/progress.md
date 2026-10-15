@@ -3,7 +3,8 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-15 02:45 UTC (E0 RxRx1 C/S 학습 중: C epoch 1 val R@1 0.110, S 0.013. JUMP 분할 1,010/1,149, 05:45 UTC 무렵 끝나면 RxRx3-core E0 자동 시작)
+- 마지막 갱신: 2026-10-15 06:31 UTC (E0 RxRx1 C/S epoch 6 학습 중. val R@1 by epoch 1–5: C 0.110 / 0.239 / 0.295 / **0.301** / 0.291(bad 1), S 0.013 / 0.027 / 0.045 / 0.035 / **0.047**. JUMP 분할 1,145/1,149, segment.py 3개 남음 → 끝나면 RxRx3-core E0 자동 시작)
+- 사용자 결정(2026-10-15): 학습 시간이 길어도 E0은 계획대로 전체(36 run) 진행한다. 축소안(G0용 6 run)은 기각
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
 ## 세션 시작 방법
@@ -24,8 +25,9 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
 3. JUMP 분할 완료 후: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
-5. CD/SD view: 22×22 패치의 적용 해상도(150 crop / 224)가 원문에 없다 → 사용자에게 묻고 구현
-6. CP feature prediction(cp_measure 특징)과 scIB 평가 구현
+5. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
+6. CD/SD view: 22×22 패치의 적용 해상도(150 crop / 224)가 원문에 없다 → 사용자에게 묻고 구현
+7. CP feature prediction(cp_measure 특징)과 scIB 평가 구현
 
 ## 진행 중
 
@@ -68,6 +70,8 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | T (B200, A1 1회 학습) | 측정 중 | | 각 run의 `timing.json`·`gpu_log.csv`. 공유 GPU라 상한으로 표기 |
 | E0 학습 처리량(초기, 배치 512, checkpointing, GPU당 run 2개 + 분할 8개 + 타 사용자 학습 공존) | 110–224 samples/s | 2026-10-15 | RxRx3-core 1 epoch(2,350 step) ≈ 1.5–2.5 h, 최대 25 epoch |
 | δ (비열등성 마진) | | | A1 seed 표준편차 × 2, E1 전에 고정 |
+| E0 RxRx1 학습 처리량 (분할 거의 종료 후) | C 349–370, S 365–403 samples/s | 2026-10-15 06:30 | 분할 16개가 돌던 때(C 225, S 295)보다 1.4–1.6배. 1 epoch(약 1,680 step) ≈ 1.1 h였음 |
+| 경합 상태 벤치마크 (GPU 1, batch 64, 합성 입력) | bf16 matmul 8192² 303 TFLOPS. 우리 모델 checkpointing 켬 212 / 끔 291 img/s(peak 1.8 / 6.1 GB). LoRA 없는 timm ViT-B 전체 파인튜닝 336 img/s | 2026-10-15 05:5x | 공칭(약 2,200 TFLOPS) 대비 약 14%만 받음 → 느린 주원인은 GPU 공유. 코드 측 손실은 checkpointing 약 27% + PEFT LoRA 약 13%. 경합 없는 처리량은 아직 미측정 |
 | ViT-B/16 DINOv3 + LoRA(block 한정, 학습 파라미터 1,179,666), bf16 fwd+bwd | 0.105 s/step (batch 64, 약 609 img/s), peak 7.03 GB | 2026-10-14 | GPU 0, torch.compile 없음, 다른 작업과 GPU 공유 중에 잰 참고값 |
 | bf16 matmul (4096²) | GPU0 16 / GPU1 180 / GPU2 79 / GPU3 371 TFLOPS | 2026-10-14 | 1차 측정(GPU0 7 / GPU1 52 / GPU2 470 / GPU3 238)과 크게 다르다. 사용량 채우기 작업이 도는 상태라 우리 작업이 실제로 받을 성능과 다를 수 있다 |
 | Cellpose-SAM `cpsam` 추론 (256², 합성) | 0.55 s, 가중치 bf16, SHA-256 일치 | 2026-10-14 | 실데이터 분할 비용은 Phase 0 데이터 처리에서 따로 측정 |
