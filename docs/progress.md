@@ -82,7 +82,11 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 이슈·블로커
 
-0. **E0 RxRx1 C가 원문보다 높게 나왔다(G0 허용치 0.03 초과, 2026-10-15).** post-Harmony R@1 0.666(원문 0.552), R@10 0.858(원문 0.742), replicate mAP 0.993(원문 0.756). pre-Harmony R@10 0.755, mAP 0.987. 특히 mAP가 0.99로 크게 높아 지표 정의(copairs 설정: positive/negative 조건, 같은 plate 제외 여부, 대조군 처리)부터 진단한다. 원인을 찾기 전에는 코드를 바꾸지 않는다
+0. **E0 RxRx1 C가 원문보다 높게 나왔다(G0 허용치 0.03 초과, 2026-10-15).** post-Harmony R@1 0.666(원문 0.552), R@10 0.858(원문 0.742), replicate mAP 0.993(원문 0.756).
+   - **mAP 진단:** RxRx1은 EMPTY 대조군이 44 plate에 50 well뿐이라, 현행 정의(negative = 같은 plate 처리군–대조군, 원문 본문 표기와 같음)에서는 쿼리마다 positive 약 10개, negative 1–2개다. 무작위 임베딩도 mAP 0.918, label 섞은 실임베딩 0.916. 원문 S 0.251·SD 0.209·OpenPhenom SD 0.077은 이 바닥값보다 훨씬 낮으므로 **원문 구현은 본문 표기와 다른 negative 집합을 썼다.**
+   - 대안 정의(RxRx1 C, post / pre / 무작위): A 현행 0.993/0.987/0.918 · B 대조군 전체(plate 무관) 0.955/0.932/0.220 · C copairs 예제(reference index) 0.955/0.932/0.219 · D 다른 label 전부(다른 plate) 0.446/0.277/0.002. 어느 것도 0.756과 맞지 않는다
+   - 다음: RxRx1 S, RxRx3-core C/S가 끝나면 같은 4개 정의로 계산해 원문 C·S 값과 C/S 비율에 가장 맞는 정의를 찾는다. 평가 코드(고정 정의)는 사용자 승인 전에는 바꾸지 않는다. positive control(1,318 well, crop 없음)을 대조군에 넣는 가설은 원문이 RxRx1 대조군을 EMPTY로만 적어 우선순위가 낮다
+   - **recall 차이 후보:** 정의는 원문과 같다. RxRx1 perturbation 임베딩이 원문(ESM2)과 달리 siRNA별 학습 가능 표라 사실상 클래스 지도학습에 가깝다(decisions.md 2026-10-14). ESM2를 쓰는 RxRx3-core의 G0 일치 여부로 확인한다
 
 1. **GPU 공유:** `nvidia-smi`에 다른 프로세스가 여럿 보인다. 그중 `/opt/conda/bin/python3`(multiprocessing spawn 4개, GPU당 40–143 GB, 2026-09 말부터 실행)은 다른 사람이 사용량을 채우려고 올린 작업으로, 우리가 GPU를 쓰면 자원이 유동적으로 우리에게 할당된다(사용자 확인, 2026-10-14). 따라서 점유 메모리·사용률만 보고 GPU가 부족하다고 판단하지 않는다. 그 밖의 학습 작업(다른 사용자의 train_val.py, run_brca.py 등)은 실제 경합 대상이다. T를 잴 때는 측정 시점의 GPU 점유 상태를 함께 기록한다
 2. **CPU 스레드 경합(해결):** torch가 프로세스마다 CPU 스레드 144개를 잡아, 분할 프로세스 8–16개가 288코어에서 경합했다(같은 FOV가 2–18초). `OMP_NUM_THREADS` 등을 12로 제한해 재시작. 여러 프로세스를 띄울 때는 항상 스레드 수를 제한한다
