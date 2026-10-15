@@ -257,4 +257,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BaseException:
+        # 예외 후에도 DataLoader worker 등이 남아 GPU 메모리를 쥔 채 멈추는 일이 있었다(2026-10-15).
+        # 공유 GPU를 바로 돌려주도록 traceback만 남기고 즉시 종료한다
+        import traceback
+
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(1)

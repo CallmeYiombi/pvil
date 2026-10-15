@@ -20,7 +20,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). 학습이 예외로 죽으면 프로세스가 GPU 메모리를 쥔 채 남을 수 있다 → `tmux kill-session` 후 `ps`로 확인
+1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
 2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
 3. JUMP 분할 완료 후: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
