@@ -23,7 +23,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). 학습이 예외로 죽으면 프로세스가 GPU 메모리를 쥔 채 남을 수 있다 → `tmux kill-session` 후 `ps`로 확인
 2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
 3. JUMP 분할 완료 후: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
-4. **사용자 결정 대기:** (a) S-clip 변형을 E2 민감도 분석에 넣을지(핵 overflow 감사 결과, 아래 완료 항목), (b) JUMP 부분집합 규칙 유지 여부(대안 기준 293개 비교, 아래 완료 항목)
+4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 5. CD/SD view: 22×22 패치의 적용 해상도(150 crop / 224)가 원문에 없다 → 사용자에게 묻고 구현
 6. CP feature prediction(cp_measure 특징)과 scIB 평가 구현
 
