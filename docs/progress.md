@@ -3,7 +3,8 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-14 23:30 UTC (JUMP 다운로드 완료, RxRx3-core 분할 완료, JUMP 분할 851/1,149)
+- 마지막 갱신: 2026-10-15 00:45 UTC (E0 RxRx3-core·RxRx1 × C/S seed 0 학습 중, JUMP 분할 913/1,149)
+- **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
 ## 세션 시작 방법
 
@@ -19,18 +20,25 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 다음 할 일
 
-1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그. 특히 JUMP 분할(`pvil_seg_jump`) 로그에 Traceback이 없는지 본다. JUMP 읽기 경로는 source_4 plate 1개(`source_4__BR00121427`)로 시험 완료: 387 FOV, FOV당 세포 중앙값 188, border_ok 71%
-2. RxRx3-core: `python scripts/preview_seg.py configs/preprocess/rxrx3_core.yaml`로 source별 통계·윤곽 확인 → `python scripts/make_crops.py configs/preprocess/rxrx3_core.yaml --dry-run`으로 역할 정의 수치 확인 → 원문(735 / 104,166)과 비교해 사용자와 역할 정의 확정 → Stage B
-3. RxRx1 Stage B: `python scripts/make_crops.py configs/preprocess/rxrx1.yaml` (역할 정의 확정됨). experiment별 QC 통과율을 보고한다
-4. JUMP-CP 분할 완료 후 같은 순서로 점검·Stage B
-5. view 생성기 결정 사항: 중심 세포 핵 마스크의 11.5%가 세포 마스크 밖으로 일부 나온다(RxRx3 시험). S view에서 핵을 세포 안으로 자를지 정한다
+1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). 학습이 예외로 죽으면 프로세스가 GPU 메모리를 쥔 채 남을 수 있다 → `tmux kill-session` 후 `ps`로 확인
+2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
+3. JUMP 분할 완료 후: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
+4. **사용자 결정 대기:** (a) S-clip 변형을 E2 민감도 분석에 넣을지(핵 overflow 감사 결과, 아래 완료 항목), (b) JUMP 부분집합 규칙 유지 여부(대안 기준 293개 비교, 아래 완료 항목)
+5. CD/SD view: 22×22 패치의 적용 해상도(150 crop / 224)가 원문에 없다 → 사용자에게 묻고 구현
+6. CP feature prediction(cp_measure 특징)과 scIB 평가 구현
 
 ## 진행 중
 
-- JUMP-CP Stage A 분할 (아래 실행 중인 작업)
+- E0 학습 4 run, JUMP-CP Stage A 분할 (아래 실행 중인 작업)
 
 ## 완료
 
+- 2026-10-15 E0 파이프라인 구현: view(C, S; CD/SD는 TODO), 샘플러(63×8 + 대조군 8, 배치 층화, held-out 가드), A1 모델, multi-positive 손실, `scripts/{train,evaluate,summarize_e0,cache_crops,make_pert_embeddings}.py`, `scripts/run_e0_tmux.sh`, 테스트 7개(전체 36 passed). 스모크 학습·평가 확인
+- 2026-10-15 Stage B 완료: RxRx1 941,362 crops(QC 통과율 experiment별 0.74–0.94, HEPG2-05·09가 낮음), RxRx3-core 1,352,958 crops(plate별 0.89–0.90). memmap 캐시 `/tmp/pvil_cache/{rxrx1,rxrx3_core}`
+- 2026-10-14 ESM2 유전자 임베딩 734개(`pvil_data/pert_emb/rxrx3_core_esm2.npz`, 1,022 aa 초과 105개는 창 평균, C7orf26→INTS15·MPP5→PALS1은 NCBI 동의어로 해결)
+- 2026-10-14 핵 overflow 감사(`scripts/audit_nucleus_overflow.py`, held-out 배치 제외): 핵이 세포 밖으로 1픽셀 이상 나온 세포 RxRx3-core 16.7%·RxRx1 32.0%, 핵 면적의 5% 넘게 나온 세포 4.1%·7.1%. 나온 픽셀이 이웃 세포 위에 놓인 비율(픽셀 기준) 87.7%·43.6%. RxRx1은 밀도가 높을수록 overflow가 많다(23.5% → 42.6%)
+- 2026-10-14 RxRx3-core 역할 확정과 원문 차이 분해(decisions.md, `results/E0/data_audit/rxrx3_core_roles.json`)
+- 2026-10-14 JUMP 부분집합 규칙 재검토: 현행 907개는 사실상 "6개 이상 source에 나오는 화합물"(TARGET2 293개가 모두 여기에 포함). 대안 "source_4와 다른 source 1곳 이상" = 293개(= TARGET2 전부, 모두 9–10개 source에 있음), 처리군 11,716 wells. 현행과의 차이는 갤러리 방해 화합물 614개 유무
 - 2026-10-14 16:23 JUMP-CP 원본 다운로드 완료(1,149 plates, 1,103,705 파일, 2.51 TB, 평균 120 MB/s) + RxRx3-core Stage A 완료(1,584 plates). `pvil_wait_jump`가 JUMP 분할을 자동 시작
 - 2026-10-14 RxRx1 Stage A 완료: 44 plates, 27,094 FOV, 매칭 세포 431만. experiment별 FOV당 세포 중앙값 51–385(밀도 차이 최대 7.5배, 과분할 아님, 윤곽 확인). `scripts/preview_seg.py`, `pvil_data/seg/rxrx1/_preview/`. Stage B에서 experiment별 QC 통과율을 보고한다(핵/세포질 비율 QC가 밀집 experiment에 몰릴 수 있음)
 - 2026-10-14 Stage B 구현(`scripts/make_crops.py`) + RxRx3-core plate 2개 시험: 3,392 crops, 중앙 픽셀 = 중심 라벨 100%, crop당 세포 중앙값 15, 약 53 KB/crop (`pvil_data/crops/rxrx3_core_partial/`, 시험용)
@@ -48,13 +56,18 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_seg_jump` (창 s0–s15) | `scripts/run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` (1,149 plates) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_1623_shard{0..15}.log` | 2026-10-14 16:23 UTC (23:30 기준 851/1,149, Traceback 없음, 2.2–3.8 s/FOV) |
+| `pvil_seg_jump` (창 s0–s15) | `GPUS="1 2" scripts/run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` (GPU 1·2로 재시작) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_2348_shard{0..15}.log` | 2026-10-14 23:48 UTC (재시작 시 878/1,149) |
+| `pvil_e0_rxrx3_c` | `scripts/run_e0_tmux.sh pvil_e0_rxrx3_c 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1) | `/home/genetics/yiombi/pvil_data/logs/pvil_e0_rxrx3_c_20261015_0025.log`, `results/E0/dino_c/rxrx3_core/seed0/` | 2026-10-15 00:25 UTC |
+| `pvil_e0_rxrx3_s` | 같은 형식, `dino_s_rxrx3_core.yaml` (GPU 2) | `.../pvil_e0_rxrx3_s_20261015_0025.log` | 2026-10-15 00:25 UTC |
+| `pvil_e0_rxrx1_c` | 같은 형식, `dino_c_rxrx1.yaml` (GPU 1) | `.../pvil_e0_rxrx1_c_20261015_0037.log` | 2026-10-15 00:37 UTC |
+| `pvil_e0_rxrx1_s` | 같은 형식, `dino_s_rxrx1.yaml` (GPU 2) | `.../pvil_e0_rxrx1_s_20261015_0037.log` | 2026-10-15 00:37 UTC |
 
 ## 측정값
 
 | 항목 | 값 | 측정일 | 비고 |
 | --- | --- | --- | --- |
-| T (B200, A1 1회 학습) | | | 계획서 추정은 A100 기준 2–5 GPU-시간. E0에서 측정 |
+| T (B200, A1 1회 학습) | 측정 중 | | 각 run의 `timing.json`·`gpu_log.csv`. 공유 GPU라 상한으로 표기 |
+| E0 학습 처리량(초기, 배치 512, checkpointing, GPU당 run 2개 + 분할 8개 + 타 사용자 학습 공존) | 110–224 samples/s | 2026-10-15 | RxRx3-core 1 epoch(2,350 step) ≈ 1.5–2.5 h, 최대 25 epoch |
 | δ (비열등성 마진) | | | A1 seed 표준편차 × 2, E1 전에 고정 |
 | ViT-B/16 DINOv3 + LoRA(block 한정, 학습 파라미터 1,179,666), bf16 fwd+bwd | 0.105 s/step (batch 64, 약 609 img/s), peak 7.03 GB | 2026-10-14 | GPU 0, torch.compile 없음, 다른 작업과 GPU 공유 중에 잰 참고값 |
 | bf16 matmul (4096²) | GPU0 16 / GPU1 180 / GPU2 79 / GPU3 371 TFLOPS | 2026-10-14 | 1차 측정(GPU0 7 / GPU1 52 / GPU2 470 / GPU3 238)과 크게 다르다. 사용량 채우기 작업이 도는 상태라 우리 작업이 실제로 받을 성능과 다를 수 있다 |
