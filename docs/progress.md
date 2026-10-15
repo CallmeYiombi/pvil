@@ -23,7 +23,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
 2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
-3. JUMP 분할 완료(2026-10-15 06:59). 원본이 overlay `/tmp/pvil_raw/`라 서버 재생성 전에 Stage B를 끝내야 한다. 다만 지금 cgroup 594/597 GiB(대부분 page cache)라 RxRx1 run이 끝난 뒤 시작 권장: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
+3. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`). 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 5. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
 6. CD/SD view 구현 완료(2026-10-15, 224 기준, 패치 → 기하 증강 순서 확정, `configs/E0/dino_{cd,sd}_{rxrx1,rxrx3_core}.yaml`). 실행은 GPU·메모리 여유를 보고 `scripts/run_e0_tmux.sh`로 띄운다. "증강 뒤 패치"는 E2 민감도 분석 후보
@@ -59,8 +59,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_e0_rxrx1_c` | 같은 형식, `dino_c_rxrx1.yaml` (GPU 1) | `.../pvil_e0_rxrx1_c_20261015_0037.log` | 2026-10-15 00:37 UTC |
-| `pvil_e0_rxrx1_s` | 같은 형식, `dino_s_rxrx1.yaml` (GPU 2) | `.../pvil_e0_rxrx1_s_20261015_0037.log` | 2026-10-15 00:37 UTC |
+| `pvil_stageB_jump` | `make_crops.py configs/preprocess/jump_cp.yaml --workers 6` (nice 10, ionice idle급 7, 스레드 4. RxRx3-core 학습 보호용으로 기본 16에서 줄임) | `/home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log` | 2026-10-15 15:24 UTC |
 | `pvil_e0_rxrx3_c` | `scripts/run_e0_tmux.sh pvil_e0_rxrx3_c 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1, `pvil_wait_rxrx3`가 띄움) | `.../pvil_e0_rxrx3_c_20261015_0659.log` | 2026-10-15 06:59 UTC |
 | `pvil_e0_rxrx3_s` | 같은 형식, `dino_s_rxrx3_core.yaml` (GPU 2) | `.../pvil_e0_rxrx3_s_20261015_0659.log` | 2026-10-15 06:59 UTC |
 
@@ -87,6 +86,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
    - 대안 정의(RxRx1 C, post / pre / 무작위): A 현행 0.993/0.987/0.918 · B 대조군 전체(plate 무관) 0.955/0.932/0.220 · C copairs 예제(reference index) 0.955/0.932/0.219 · D 다른 label 전부(다른 plate) 0.446/0.277/0.002. 어느 것도 0.756과 맞지 않는다
    - **RxRx1 S 추가(2026-10-15 14:5x, `scripts/diagnose_map_defs.py` → `results/E0/*/rxrx1/seed0/map_defs.json`):** S post-Harmony A 0.949 · B/C 0.679 · D 0.092. S/C 비율: A 0.96, B/C 0.71, D 0.21, 원문 0.33(0.251/0.756). 어느 정의도 원문과 맞지 않는다. 우리 S의 R@10도 0.571로 원문 0.322보다 훨씬 높아(C도 +0.116), RxRx1에서는 지표 정의와 모델 성능 차이(학습 가능 siRNA 표)가 섞여 분리할 수 없다
    - RxRx3-core는 physical plate 1,582개에 대조군이 plate당 3 well, label당 처리군 well 약 104개다. 정의 A에서는 negative 3개 대 positive 약 100개라 무작위 바닥값이 RxRx1보다 더 높을 것이다(계산 중). 원문 RxRx3-core DINO C 0.626·S 0.469도 A로는 나올 수 없을 가능성이 크다
+   - **RxRx3-core 무작위 바닥값(well 표만으로 계산):** A 0.971, B 0.022. 원문 DINO C 0.626·S 0.469 < 0.971이므로 **정의 A는 두 데이터셋 모두에서 배제**
    - 다음: RxRx3-core C/S가 끝나면 같은 4개 정의로 계산해 원문 C·S 값과 C/S 비율에 가장 맞는 정의를 찾는다. 평가 코드(고정 정의)는 사용자 승인 전에는 바꾸지 않는다. positive control(1,318 well, crop 없음)을 대조군에 넣는 가설은 원문이 RxRx1 대조군을 EMPTY로만 적어 우선순위가 낮다
    - **recall 차이 후보:** 정의는 원문과 같다. RxRx1 perturbation 임베딩이 원문(ESM2)과 달리 siRNA별 학습 가능 표라 사실상 클래스 지도학습에 가깝다(decisions.md 2026-10-14). ESM2를 쓰는 RxRx3-core의 G0 일치 여부로 확인한다
 
