@@ -7,7 +7,11 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
+
+import pandas as pd
+from omegaconf import OmegaConf
 
 REPO = Path(__file__).resolve().parents[1]
 E0 = REPO / "results/E0"
@@ -28,7 +32,11 @@ REF = {
                 "mAP": {"C": 0.276, "CD": 0.263, "S": 0.225, "SD": 0.243},
                 "CP r": {"C": 0.278, "CD": 0.263, "S": 0.332, "SD": 0.322}},
 }
+# 원문 데이터 규모 (P0_reproduction.md §2, research_plan.md §5.1): wells(대조군 포함), perturbation 수
+PAPER_DATA = {"rxrx1": (12_581, 1_108), "rxrx3_core": (104_166, 735), "jump_cp": (28_003, 1_466)}
 DATASETS = ["rxrx1", "rxrx3_core", "jump_cp"]
+TAGS = ("[원문 없음]", "[원문 차이]")
+ENV_PACKAGES = ("torch", "timm", "peft", "harmonypy", "copairs", "pycytominer", "cellpose")
 VIEWS = ["C", "S", "CD", "SD"]
 
 
@@ -48,6 +56,66 @@ def ours(m, metric, stage="post_harmony"):
 
 def fmt(x):
     return "—" if x is None else f"{x:.3f}"
+
+
+def data_rows() -> list[str]:
+    """데이터 규모: 우리 값은 Stage B 요약(sampling_summary.json)에서 읽는다. crop 전이면 well 정의 파일."""
+    crops = Path(OmegaConf.to_container(OmegaConf.load(REPO / "configs/paths.yaml"), resolve=True)["crops_dir"])
+    rows = []
+    for ds in DATASETS:
+        pw, pp = PAPER_DATA[ds]
+        f = crops / ds / "sampling_summary.json"
+        if f.exists():
+            d = json.loads(f.read_text())
+            ours = (f"{d['n_wells_non_excluded']:,}", f"{d['n_perturbations']:,}", f"{d['n_wells_with_crops']:,}",
+                    f"{d['n_crops']:,}", "Stage B 완료")
+        elif ds == "jump_cp":
+            w = pd.read_csv(REPO / "configs/data/jump_cp_wells.csv.gz")
+            n_p = w.loc[w.role == "treatment", "Metadata_JCP2022"].nunique()
+            ours = (f"{len(w):,}", f"{n_p:,}", "—", "—", "well 정의만 (crop 전)")
+        else:
+            ours = ("—",) * 4 + ("미처리",)
+        rows.append(f"| {ds} | {pw:,} | {pp:,} | " + " | ".join(ours) + " |")
+    return rows
+
+
+def short(text: str, n: int = 220) -> str:
+    """결정 열 요약: 태그·굵은 표시를 지우고 n자 안에서 문장 경계까지 자른다."""
+    for t in TAGS:
+        text = text.replace(t, "")
+    text = re.sub(r"\s+", " ", text.replace("**", "")).strip()
+    if len(text) <= n:
+        return text
+    cut = max(text.rfind(". ", 0, n), text.rfind("다. ", 0, n) + 1)
+    return text[:cut + 1] if cut > n // 3 else text[:n - 1] + "…"
+
+
+def decision_rows() -> list[str]:
+    """decisions.md에서 [원문 없음]·[원문 차이] 태그가 붙은 행을 모은다."""
+    rows = []
+    for line in (REPO / "docs/decisions.md").read_text().splitlines():
+        if not line.startswith("| 20"):
+            continue
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)[1:-1]]
+        if len(cells) < 4 or not any(t in line for t in TAGS):
+            continue
+        kind = " · ".join(t.strip("[]") for t in TAGS if t in line)
+        rows.append(f"| {cells[0]} | {kind} | {short(cells[1])} | {cells[3]} |")
+    return rows
+
+
+def env_rows() -> list[str]:
+    rows = []
+    for ds in DATASETS:
+        for v in VIEWS:
+            f = E0 / f"dino_{v.lower()}" / ds / "seed0" / "run_info.json"
+            if not f.exists():
+                continue
+            ri = json.loads(f.read_text())
+            pk = ri.get("packages", {})
+            rows.append(f"| {ds} | {v} | {ri.get('gpu_name', '—')} | {ri.get('git_hash', '—')[:10]} | "
+                        + ", ".join(f"{k} {pk.get(k)}" for k in ENV_PACKAGES) + " |")
+    return rows
 
 
 def main():
@@ -84,6 +152,21 @@ def main():
               "공유 GPU(1·2번, 다른 작업과 동시 실행)에서 잰 값이라 상한이다. 측정 중 점유는 각 run의 `gpu_log.csv`.", "",
               "| 데이터셋 | view | epoch (best) | step | samples/s | 학습 h | val h | T (GPU-h, 벽시계) |",
               "| --- | --- | --- | --- | --- | --- | --- | --- |", *timing_rows, ""]
+    lines += ["## 원문과의 차이", "",
+              "원문과 같은 원본 데이터셋을 쓰지만, 원문이 밝히지 않은 부분을 우리가 정해 채운 재구현이다. "
+              "아래 차이는 모든 방법에 똑같이 적용되므로 방법 간 비교(E1 이후)에는 영향을 주지 않고, "
+              "원문 수치와의 비교(G0)를 해석할 때만 고려한다. G0가 어긋나면 이 표가 진단 순서의 출발점이다.", "",
+              "### 데이터 규모", "",
+              "| 데이터셋 | 원문 wells | 원문 perturbation | 우리 wells (제외 역할 뺀 정의) | 우리 perturbation | crop이 있는 wells | crops | 상태 |",
+              "| --- | --- | --- | --- | --- | --- | --- | --- |", *data_rows(), "",
+              "### 원문에 없거나 원문과 다를 수 있는 결정 (`docs/decisions.md`에서 자동 수집)", "",
+              "| 날짜 | 구분 | 내용 | 영향 범위 |", "| --- | --- | --- | --- |", *decision_rows(), "",
+              "### 계산 환경 (run별 `run_info.json`)", "",
+              "원문의 하드웨어와 패키지 버전은 확인되지 않아 비교하지 않고, 우리 값만 기록한다. "
+              "GPU는 다른 작업과 공유했다.", "",
+              "| 데이터셋 | view | GPU | git | 패키지 |", "| --- | --- | --- | --- | --- |", *env_rows(),
+              "", "- seed 변동: 원문과 이 표 모두 구성당 1회 실행이라, 차이가 seed 변동인지 구분할 수 없다. "
+              "seed 1, 2 추가 후(P0 작업 9) 다시 판단한다.", ""]
     (E0 / "summary.md").write_text("\n".join(lines))
     print("\n".join(lines))
 
