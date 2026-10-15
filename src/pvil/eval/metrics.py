@@ -51,7 +51,7 @@ def replicate_map(x: np.ndarray, meta: pd.DataFrame, *, null_size: int, alpha: f
     _guard(meta, allow_test)
     m = pd.DataFrame({"label": meta.label.to_numpy(), "plate": meta.plate_key.to_numpy(),
                       "is_control": (meta.role == "control").to_numpy()})
-    feats = pd.DataFrame(x)
+    feats = np.asarray(x, dtype=np.float64)
     ap = average_precision(m, feats, pos_sameby=["label"], pos_diffby=["plate"],
                            neg_sameby=["plate"], neg_diffby=["is_control"], progress_bar=False)
     ap = ap[~ap.is_control]

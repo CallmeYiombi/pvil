@@ -30,11 +30,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("config")
     ap.add_argument("--null-size", type=int, default=None, help="기본값 = config eval.map.null_size")
+    ap.add_argument("--smoke", action="store_true", help="train.py --max-steps 결과(seed<k>_smoke)를 평가")
     args = ap.parse_args()
     exp = OmegaConf.load(args.config)
     cfg = OmegaConf.merge(OmegaConf.load(REPO / exp.base), exp)
     paths = OmegaConf.load(REPO / "configs/paths.yaml")
-    rel = Path(cfg.experiment) / cfg.method / cfg.dataset / f"seed{cfg.seed}"
+    rel = Path(cfg.experiment) / cfg.method / cfg.dataset / (f"seed{cfg.seed}" + ("_smoke" if args.smoke else ""))
     out = REPO / paths.results_dir / rel
     emb_dir = Path(paths.embeddings_dir) / rel
 

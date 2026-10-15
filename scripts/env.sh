@@ -34,3 +34,6 @@ mkdir -p "$CELLPOSE_LOCAL_MODELS_PATH" "$UV_CACHE_DIR" "$UV_PYTHON_INSTALL_DIR" 
 if [ -f "$UV_PROJECT_ENVIRONMENT/bin/activate" ]; then
   source "$UV_PROJECT_ENVIRONMENT/bin/activate"
 fi
+
+# 공유 서버: 우리 작업은 GPU 1, 2만 쓴다(사용자 지시 2026-10-14). 스크립트가 따로 지정하면 그 값을 따른다
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-1,2}"

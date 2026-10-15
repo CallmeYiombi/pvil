@@ -41,7 +41,7 @@ GPU_QUERY = "index,name,utilization.gpu,memory.used,memory.total"
 def load_config(path: str):
     exp = OmegaConf.load(path)
     cfg = OmegaConf.merge(OmegaConf.load(REPO / exp.base), exp)
-    cfg.paths = OmegaConf.load(REPO / "configs/paths.yaml")
+    cfg.paths = OmegaConf.to_container(OmegaConf.load(REPO / "configs/paths.yaml"), resolve=True)
     return cfg
 
 
@@ -209,7 +209,7 @@ def main():
             if step % cfg.log_every == 0:
                 torch.cuda.synchronize()
                 dt = time.time() - t_win
-                tw.writerow([epoch, step, np.mean(losses[-cfg.log_every:]), float(tau()), opt.param_groups[0]["lr"],
+                tw.writerow([epoch, step, np.mean(losses[-cfg.log_every:]), tau().item(), opt.param_groups[0]["lr"],
                              opt.param_groups[1]["lr"], n_win / dt, t_wait / dt])
                 tlog.flush()
                 print(f"ep {epoch} step {step} loss {np.mean(losses[-cfg.log_every:]):.4f} "
