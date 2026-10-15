@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from pvil.data.dataset import CONTROL_LABEL, BalancedBatchSampler, CropStore, HeldOutAccessError
-from pvil.data.views import apply_geometry, make_view, sample_geometry, to_input
+from pvil.data.views import apply_geometry, build_batch, make_view, sample_geometry, to_input
 from pvil.eval.metrics import cross_batch_recall
 from pvil.losses.contrastive import multi_positive_infonce
 
@@ -26,6 +26,35 @@ def test_s_view_zeros_outside_masks_and_dna_uses_nucleus():
     assert (y[:, 1:][~cell[:, None].expand(-1, 5, -1, -1)] == 0).all()
     assert (y[:, 1:][cell[:, None].expand(-1, 5, -1, -1)] > 0).all()
     assert torch.equal(make_view(x, nuc, cell, "C", 0), x)
+
+
+def test_density_patches_position_size_value():
+    nuc, cell = _masks(3, 64)
+    x = torch.rand(3, 6, 64, 64) + 0.1
+    dens = torch.tensor([0.0, 0.5, 1.0])
+    patch = {"size": 22, "inset": 7}
+    for view, base in (("CD", "C"), ("SD", "S")):
+        y = make_view(x, nuc, cell, view, 0, dens, patch)
+        b = make_view(x, nuc, cell, base, 0)
+        on = torch.zeros(64, 64, dtype=torch.bool)
+        for r in (7, 64 - 7 - 22):
+            for c in (7, 64 - 7 - 22):
+                on[r:r + 22, c:c + 22] = True
+        assert on.sum() == 4 * 22 * 22
+        for i in range(3):                                  # 모든 채널, 패치 안은 density 값, 밖은 기본 view 그대로
+            assert (y[i][:, on] == dens[i]).all()
+            assert torch.equal(y[i][:, ~on], b[i][:, ~on])
+    with pytest.raises(ValueError):
+        make_view(x, nuc, cell, "CD", 0)
+
+
+def test_density_patches_drawn_at_input_resolution():
+    nuc, cell = _masks(2, 150)
+    img = torch.randint(0, 255, (2, 6, 150, 150), dtype=torch.uint8)
+    y = build_batch(img, nuc, cell, view="CD", dna_idx=0, size=224, augment=None,
+                    density=torch.tensor([0.25, 0.75]), patch={"size": 22, "inset": 7})
+    assert y.shape[-1] == 224
+    assert (y[0, :, 7:29, 7:29] == 0.25).all() and (y[1, :, 224 - 29:224 - 7, 224 - 29:224 - 7] == 0.75).all()
 
 
 def test_to_input_resizes_masks_nearest():
@@ -94,7 +123,8 @@ def test_sampler_composition_and_batch_stratification():
 
 
 def test_heldout_guards(tmp_path):
-    c = _cells().assign(crop_index=lambda d: np.arange(len(d)), well_key="w", plate_key="p")
+    c = _cells().assign(crop_index=lambda d: np.arange(len(d)), well_key="w", plate_key="p",
+                        fov_n_cells=lambda d: np.arange(len(d)) % 7 + 10)
     c.drop(columns="label_idx").to_parquet(tmp_path / "cells.parquet")
     (tmp_path / "meta.json").write_text(json.dumps({"n": len(c), "n_channels": 6, "crop_size": 8}))
     store = CropStore(tmp_path)
@@ -102,6 +132,10 @@ def test_heldout_guards(tmp_path):
     with pytest.raises(HeldOutAccessError):
         store.indices("heldout")
     assert len(store.indices("heldout", allow_test=True)) == c.is_heldout_batch.sum()
+    tr = c.fov_n_cells[~c.is_heldout_batch]                # density min-max는 학습 배치에서만
+    assert store.density_range == (tr.min(), tr.max())
+    assert store.density.min() == 0 and store.density.max() == 1
+    assert np.allclose(store.density * 255, np.round(store.density * 255))
     meta = pd.DataFrame({"label": ["a", "a"], "role": "perturbation", "is_heldout_batch": [True, False]})
     with pytest.raises(HeldOutAccessError):
         cross_batch_recall(np.eye(2), meta)

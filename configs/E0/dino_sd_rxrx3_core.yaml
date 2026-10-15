@@ -1,0 +1,13 @@
+# E0 재현: DINO ViT-B/16 × SD view × rxrx3_core, P-orig. 사용: python scripts/train.py configs/E0/dino_sd_rxrx3_core.yaml
+base: configs/base_cpbg.yaml
+experiment: E0
+method: dino_sd
+dataset: rxrx3_core
+view: SD
+preprocess_config: configs/preprocess/rxrx3_core.yaml
+protocol: P-orig            # held-out 배치를 early stopping에 쓰는 원문 프로토콜 (절대 규칙 1의 예외)
+seed: 0
+pert_embedding: rxrx3_core_esm2       # learned = siRNA별 학습 가능 표(decisions.md 2026-10-14), 그 밖에는 pert_emb_dir의 npz 이름
+learned_pert_dim: 128       # [원문 없음] 학습 가능 표 차원
+log_every: 50
+gpu_log_interval_sec: 300

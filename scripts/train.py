@@ -106,7 +106,7 @@ class Batches(torch.utils.data.Dataset):
         self.store = store
 
     def __getitem__(self, idx):
-        return self.store.load(idx)
+        return (*self.store.load(idx), torch.from_numpy(self.store.density[idx]))
 
 
 def main():
@@ -165,7 +165,7 @@ def main():
     info = run_info.collect(args.config, cfg.seed, protocol=cfg.protocol, fold=None, dataset=cfg.dataset,
                             method=cfg.method, view=cfg.view, smoke=smoke, data_version=store.meta,
                             cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"),
-                            gpu_name=torch.cuda.get_device_name(0), n_train_crops=int(len(train_idx)),
+                            gpu_name=torch.cuda.get_device_name(0), n_train_crops=int(len(train_idx)), density_range=list(store.density_range),
                             n_val_crops=int(len(val_idx)), steps_per_epoch=spe, n_perts=store.n_perts,
                             n_trainable_params=int(sum(p.numel() for p in params)))
     run_info.save(out, info)
@@ -177,6 +177,7 @@ def main():
                                          pin_memory=True, persistent_workers=True, prefetch_factor=4)
     aug = OmegaConf.to_container(tr.augment)
     size = cfg.data.input_size
+    patch = {"size": cfg.data.views.cd_patch_size, "inset": cfg.data.views.cd_patch_inset}
     tlog = open(out / "train_log.csv", "w", newline="")
     tw = csv.writer(tlog)
     tw.writerow(["epoch", "step", "loss", "tau", "lr_head", "lr_lora", "samples_per_sec", "data_wait_frac"])
@@ -191,10 +192,11 @@ def main():
         t0 = time.time()
         losses, t_wait, t_win, n_win = [], 0.0, time.time(), 0
         t_fetch = time.time()
-        for img, nuc, cell, lab in loader:
+        for img, nuc, cell, lab, dens in loader:
             t_wait += time.time() - t_fetch
-            img, nuc, cell, lab = (t.cuda(non_blocking=True) for t in (img, nuc, cell, lab))
-            x = build_batch(img, nuc, cell, view=cfg.view, dna_idx=dna_idx, size=size, augment=aug, gen=gen)
+            img, nuc, cell, lab, dens = (t.cuda(non_blocking=True) for t in (img, nuc, cell, lab, dens))
+            x = build_batch(img, nuc, cell, view=cfg.view, dna_idx=dna_idx, size=size, augment=aug, gen=gen,
+                            density=dens, patch=patch)
             with torch.autocast("cuda", dtype=torch.bfloat16):
                 z_img = model(x)
                 z_pert = pert(lab)
@@ -221,7 +223,7 @@ def main():
         t1 = time.time()
         t_train += t1 - t0
 
-        z_val = embed_cells(model, store, val_idx, view=cfg.view, dna_idx=dna_idx, size=size)
+        z_val = embed_cells(model, store, val_idx, view=cfg.view, dna_idx=dna_idx, size=size, patch=patch)
         r1 = img2pert_macro_r1(z_val, store.cells.label_idx.to_numpy()[val_idx], pert, store.n_perts)
         ep_val = time.time() - t1
         t_val += ep_val
@@ -241,7 +243,7 @@ def main():
     t2 = time.time()
     ck = torch.load(ckpt_dir / "best.pt", map_location="cuda")
     load_trainable(model, pert, tau, ck["state"])
-    emb = embed_cells(model, store, store.indices("all", allow_test=True), view=cfg.view, dna_idx=dna_idx, size=size)
+    emb = embed_cells(model, store, store.indices("all", allow_test=True), view=cfg.view, dna_idx=dna_idx, size=size, patch=patch)
     np.save(emb_dir / "cells.npy", emb.astype(np.float32))
     t_embed = time.time() - t2
 

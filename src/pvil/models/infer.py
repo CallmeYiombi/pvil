@@ -12,13 +12,15 @@ from pvil.data.views import build_batch
 
 @torch.no_grad()
 def embed_cells(model, store: CropStore, idx: np.ndarray, *, view: str, dna_idx: int, size: int,
-                batch: int = 1024, device="cuda") -> np.ndarray:
+                batch: int = 1024, device="cuda", patch: dict | None = None) -> np.ndarray:
     """idx 순서대로 증강 없이 128차원 projection 임베딩을 낸다."""
     model.eval()
     out = []
     for a in range(0, len(idx), batch):
         img, nuc, cell, _ = store.load(idx[a:a + batch])
-        x = build_batch(img.to(device), nuc.to(device), cell.to(device), view=view, dna_idx=dna_idx, size=size, augment=None)
+        dens = torch.from_numpy(store.density[idx[a:a + batch]]).to(device)
+        x = build_batch(img.to(device), nuc.to(device), cell.to(device), view=view, dna_idx=dna_idx, size=size,
+                        augment=None, density=dens, patch=patch)
         with torch.autocast("cuda", dtype=torch.bfloat16):
             out.append(model(x).float().cpu())
     model.train()

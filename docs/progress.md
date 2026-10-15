@@ -26,7 +26,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 3. JUMP 분할 완료(2026-10-15 06:59). 원본이 overlay `/tmp/pvil_raw/`라 서버 재생성 전에 Stage B를 끝내야 한다. 다만 지금 cgroup 594/597 GiB(대부분 page cache)라 RxRx1 run이 끝난 뒤 시작 권장: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 5. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
-6. CD/SD view: 22×22 패치의 적용 해상도(150 crop / 224)가 원문에 없다 → 사용자에게 묻고 구현
+6. CD/SD view 구현 완료(2026-10-15, 224 기준, `configs/E0/dino_{cd,sd}_{rxrx1,rxrx3_core}.yaml` 추가). **사용자 결정 대기:** 0–90° 연속 회전 증강이 모서리 패치를 밀어낸다(합성 측정: 0–90° 균등일 때 패치 픽셀 평균 29%만 남고, 학습 샘플의 52%(약 22–68°)는 패치가 완전히 사라진다). 평가에는 증강이 없어 영향이 없다. 선택지: (a) 현행 유지(패치 → 회전) (b) CD/SD만 패치를 기하 증강 뒤에 그린다. CD/SD run 시작 전에 정한다
 7. CP feature prediction(cp_measure 특징)과 scIB 평가 구현
 
 ## 진행 중

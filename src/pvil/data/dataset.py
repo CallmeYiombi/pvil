@@ -2,6 +2,8 @@
 
 CropStore: scripts/cache_crops.py가 만든 memmap(이미지 uint8, 중심 세포 핵·세포 이진 마스크)과
 crop 표(cells.parquet). held-out 배치는 allow_test=True 없이 꺼낼 수 없다(.claude/rules/evaluation.md).
+CD/SD 패치 강도(`density`)는 FOV 세포 수를 min-max로 [0, 255] 정수에 맞춘 뒤 /255 한 값이다.
+min·max는 학습 배치 세포에서만 구한다(held-out 배치를 전처리 상수에도 쓰지 않는다. decisions.md 2026-10-15).
 
 BalancedBatchSampler: step마다 perturbation n_perts개 × k개 + 대조군 k개.
 perturbation 안에서는 배치(source)를 무작위 순서로 돌아가며 뽑아 cross-batch 커버리지를 확보한다.
@@ -38,6 +40,11 @@ class CropStore:
         lut = {p: i for i, p in enumerate(self.perts)} | {CONTROL_LABEL: len(self.perts)}
         cells["label_idx"] = cells.label.map(lut).astype(np.int64)
         self.cells = cells
+        n_cells = cells.fov_n_cells.to_numpy(np.float64)
+        tr = n_cells[~cells.is_heldout_batch.to_numpy()]
+        self.density_range = (float(tr.min()), float(tr.max()))
+        lo, hi = self.density_range
+        self.density = (np.round(np.clip((n_cells - lo) / max(hi - lo, 1.0), 0, 1) * 255) / 255).astype(np.float32)
 
     def __getstate__(self):                     # DataLoader worker로 memmap 내용을 복사하지 않는다
         return {**self.__dict__, "_mm": {}}

@@ -1,8 +1,9 @@
 """view 생성과 증강 (사양 A.1, A.2). GPU 배치 연산.
 
 입력은 crop 저장소의 원본(uint8 [B,C,150,150])과 중심 세포의 이진 마스크(핵, 세포)다.
-순서: 리사이즈(이미지 bilinear, 마스크 nearest) → 밝기·대비 → view 마스킹 → 기하 증강.
-밝기·대비를 마스킹 전에 적용해 S view의 마스크 밖이 정확히 0으로 남게 한다.
+순서: 리사이즈(이미지 bilinear, 마스크 nearest) → 밝기·대비 → view 마스킹·밀도 패치 → 기하 증강.
+밝기·대비를 마스킹 전에 적용해 S view의 마스크 밖이 정확히 0으로 남고 CD/SD 패치 강도가 그대로 남게 한다.
+CD/SD 패치는 224 입력 해상도에 그린다(decisions.md 2026-10-15). 기하 증강은 패치까지 함께 돌린다.
 기하 증강은 파라미터를 따로 뽑아(`sample_geometry`) 같은 세포의 여러 view에 같은 변환을 줄 수 있다.
 """
 
@@ -24,11 +25,24 @@ def to_input(img_u8: torch.Tensor, nuc: torch.Tensor, cell: torch.Tensor, size: 
     return x, m[:, 0], m[:, 1]
 
 
-def make_view(x: torch.Tensor, nuc: torch.Tensor, cell: torch.Tensor, view: str, dna_idx: int) -> torch.Tensor:
+def draw_density_patches(x: torch.Tensor, density: torch.Tensor, size: int, inset: int) -> torch.Tensor:
+    """네 모서리에서 inset px 안쪽에 size×size 정사각 패치를 모든 채널에 그린다. 패치 값 = density [B] ∈ [0,1]."""
+    H, W = x.shape[-2:]
+    y = x.clone()
+    v = density.to(x.dtype).view(-1, 1, 1, 1)
+    for r in (inset, H - inset - size):
+        for c in (inset, W - inset - size):
+            y[..., r:r + size, c:c + size] = v
+    return y
+
+
+def make_view(x: torch.Tensor, nuc: torch.Tensor, cell: torch.Tensor, view: str, dna_idx: int,
+              density: torch.Tensor | None = None, patch: dict | None = None) -> torch.Tensor:
     """x [B,C,H,W], 중심 세포 마스크 nuc/cell [B,H,W] → view 이미지.
 
     C: 원본. S: DNA 채널은 핵 마스크 밖을 0, 나머지 채널은 세포 마스크 밖을 0.
     (E0은 원문대로 핵 마스크를 세포 마스크로 자르지 않는다. decisions.md 2026-10-14)
+    CD/SD: C/S 위에 밀도 패치. density [B] ∈ [0,1](CropStore.density), patch = {size, inset}.
     """
     if view == "C":
         return x
@@ -37,8 +51,10 @@ def make_view(x: torch.Tensor, nuc: torch.Tensor, cell: torch.Tensor, view: str,
         keep[:, dna_idx] = nuc
         return x * keep
     if view in ("CD", "SD"):
-        # TODO: 22×22 패치의 적용 해상도(150 crop 기준 / 224 기준)가 원문에 없다. E0 C·S 이후에 정한다
-        raise NotImplementedError(f"{view} view는 아직 구현하지 않았다")
+        if density is None or patch is None:
+            raise ValueError(f"{view} view에는 density와 patch가 필요하다")
+        base = make_view(x, nuc, cell, view[0], dna_idx)
+        return draw_density_patches(base, density, patch["size"], patch["inset"])
     if view in ("N", "B"):
         raise NotImplementedError(f"{view} view는 E2용 스텁이다")
     raise ValueError(f"알 수 없는 view: {view}")
@@ -73,12 +89,13 @@ def apply_geometry(x: torch.Tensor, g: dict) -> torch.Tensor:
 
 
 def build_batch(img_u8, nuc, cell, *, view: str, dna_idx: int, size: int, augment: dict | None,
-                gen: torch.Generator | None = None) -> torch.Tensor:
+                gen: torch.Generator | None = None, density: torch.Tensor | None = None,
+                patch: dict | None = None) -> torch.Tensor:
     """학습·추론 공용. augment가 None이면 증강 없이 view만 만든다."""
     x, n, c = to_input(img_u8, nuc, cell, size)
     if augment:
         x = photometric(x, augment["brightness"], augment["contrast"], gen)
-    x = make_view(x, n, c, view, dna_idx)
+    x = make_view(x, n, c, view, dna_idx, density, patch)
     if augment:
         g = sample_geometry(x.shape[0], augment["rotate_deg"][1], augment["hflip"], augment["vflip"], x.device, gen)
         x = apply_geometry(x, g)
