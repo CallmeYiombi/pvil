@@ -57,8 +57,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
 | `pvil_seg_jump` (창 s0–s15) | `GPUS="1 2" scripts/run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` (GPU 1·2로 재시작) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_2348_shard{0..15}.log` | 2026-10-14 23:48 UTC (재시작 시 878/1,149) |
-| `pvil_e0_rxrx3_c` | `scripts/run_e0_tmux.sh pvil_e0_rxrx3_c 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1) | `/home/genetics/yiombi/pvil_data/logs/pvil_e0_rxrx3_c_20261015_0025.log`, `results/E0/dino_c/rxrx3_core/seed0/` | 2026-10-15 00:25 UTC |
-| `pvil_e0_rxrx3_s` | 같은 형식, `dino_s_rxrx3_core.yaml` (GPU 2) | `.../pvil_e0_rxrx3_s_20261015_0025.log` | 2026-10-15 00:25 UTC |
+| `pvil_wait_rxrx3` | `scripts/start_rxrx3_e0_after_jump_seg.sh` — JUMP 분할 1,149 plate 완료 + segment.py 종료 확인 후 `pvil_e0_rxrx3_{c,s}`를 GPU 1·2에 띄움 | `/home/genetics/yiombi/pvil_data/logs/wait_rxrx3_e0.log`, 이후 `pvil_e0_rxrx3_{c,s}_<시각>.log` | 2026-10-15 01:05 UTC (00:25에 띄운 RxRx3 run은 데이터 대기 70–80%로 01:03에 중단) |
 | `pvil_e0_rxrx1_c` | 같은 형식, `dino_c_rxrx1.yaml` (GPU 1) | `.../pvil_e0_rxrx1_c_20261015_0037.log` | 2026-10-15 00:37 UTC |
 | `pvil_e0_rxrx1_s` | 같은 형식, `dino_s_rxrx1.yaml` (GPU 2) | `.../pvil_e0_rxrx1_s_20261015_0037.log` | 2026-10-15 00:37 UTC |
 
@@ -86,3 +85,4 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 6. RxRx3-core well 수 불일치: 원문 104,166 wells / 735 perturbation, 메타데이터 CRISPR 126,900 / 736
 7. RxRx1 HepG2 well 수 불일치: 원문 12,581 wells / 1,108 perturbation, 메타데이터 13,547 wells(처리군 12,179 + 양성대조군 1,318 + 음성대조군 50) / siRNA 라벨 1,139. 분할·QC 뒤 재비교
 8. RxRx1 sphering: 대조군(EMPTY) well이 50개뿐인데 임베딩은 128차원이라, 대조군 공분산의 계수(rank)가 ≤ 49다. ZCA-cor(epsilon 1e-6)가 대조군에서 분산이 없는 방향을 크게 키울 수 있다. 원문 사양대로 진행하되, G0가 어긋나면 이것을 먼저 진단한다
+9. **메모리 상한(cgroup) 641 GB:** 서버 RAM은 2.2 TB지만 컨테이너 상한은 641 GB다(`/sys/fs/cgroup/memory.max`). JUMP 분할 16개가 약 250 GB를 쓰는 동안에는 page cache로 약 333 GB만 남아, crop 캐시(RxRx3-core 227 + RxRx1 158 = 385 GB)가 다 올라가지 않는다. RxRx3-core run이 데이터 대기 70–80%(57 samples/s)로 떨어져 중단했고, 분할이 끝나면 자동으로 재시작한다. 앞으로 JUMP 캐시까지 더하면 동시 학습 데이터셋 수를 이 상한에 맞춰 정한다
