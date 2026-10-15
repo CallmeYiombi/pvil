@@ -68,7 +68,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | 항목 | 값 | 측정일 | 비고 |
 | --- | --- | --- | --- |
-| T (B200, A1 1회 학습) | 측정 중 | | 각 run의 `timing.json`·`gpu_log.csv`. 공유 GPU라 상한으로 표기 |
+| T (B200, A1 1회 학습) | RxRx1 C 12.0 GPU-시간(15 epoch, early stop, best ep 10, 평균 315 samples/s). 나머지 측정 중 | 2026-10-15 | 각 run의 `timing.json`·`gpu_log.csv`. 공유 GPU라 상한으로 표기 |
 | E0 학습 처리량(초기, 배치 512, checkpointing, GPU당 run 2개 + 분할 8개 + 타 사용자 학습 공존) | 110–224 samples/s | 2026-10-15 | RxRx3-core 1 epoch(2,350 step) ≈ 1.5–2.5 h, 최대 25 epoch |
 | δ (비열등성 마진) | | | A1 seed 표준편차 × 2, E1 전에 고정 |
 | E0 RxRx1 학습 처리량 (분할 거의 종료 후) | C 349–370, S 365–403 samples/s | 2026-10-15 06:30 | 분할 16개가 돌던 때(C 225, S 295)보다 1.4–1.6배. 1 epoch(약 1,680 step) ≈ 1.1 h였음 |
@@ -81,6 +81,8 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | Stage A 실처리 (RxRx1 HepG2 512², 8 프로세스) | 2.2–2.3 s/FOV/프로세스, FOV당 세포 290–390 | 2026-10-14 | GPU 사용률 17–32%, CPU 후처리가 병목 → 16 프로세스로 재시작 |
 
 ## 이슈·블로커
+
+0. **E0 RxRx1 C가 원문보다 높게 나왔다(G0 허용치 0.03 초과, 2026-10-15).** post-Harmony R@1 0.666(원문 0.552), R@10 0.858(원문 0.742), replicate mAP 0.993(원문 0.756). pre-Harmony R@10 0.755, mAP 0.987. 특히 mAP가 0.99로 크게 높아 지표 정의(copairs 설정: positive/negative 조건, 같은 plate 제외 여부, 대조군 처리)부터 진단한다. 원인을 찾기 전에는 코드를 바꾸지 않는다
 
 1. **GPU 공유:** `nvidia-smi`에 다른 프로세스가 여럿 보인다. 그중 `/opt/conda/bin/python3`(multiprocessing spawn 4개, GPU당 40–143 GB, 2026-09 말부터 실행)은 다른 사람이 사용량을 채우려고 올린 작업으로, 우리가 GPU를 쓰면 자원이 유동적으로 우리에게 할당된다(사용자 확인, 2026-10-14). 따라서 점유 메모리·사용률만 보고 GPU가 부족하다고 판단하지 않는다. 그 밖의 학습 작업(다른 사용자의 train_val.py, run_brca.py 등)은 실제 경합 대상이다. T를 잴 때는 측정 시점의 GPU 점유 상태를 함께 기록한다
 2. **CPU 스레드 경합(해결):** torch가 프로세스마다 CPU 스레드 144개를 잡아, 분할 프로세스 8–16개가 288코어에서 경합했다(같은 FOV가 2–18초). `OMP_NUM_THREADS` 등을 12로 제한해 재시작. 여러 프로세스를 띄울 때는 항상 스레드 수를 제한한다
