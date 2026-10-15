@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-15 09:05 UTC (E0 4 run 학습 중, 오류 없음, run당 약 400 samples/s, GPU 메모리 run당 약 14 GB. 최고 val R@1: RxRx1 C 0.323(ep 8, ep 10 진행) · S 0.059(ep 8) · RxRx3-core C 0.061(ep 2) · S 0.008(ep 1). JUMP Stage A 분할 1,149/1,149 완료 06:59 → RxRx3-core E0 자동 시작)
+- 마지막 갱신: 2026-10-15 12:30 UTC (E0 4 run 오류 없음. RxRx1 C는 ep 15에서 early stopping(patience 5, best val R@1 0.345 @ ep 10) → 학습 종료 후 후속 단계 진행 중. RxRx1 S ep 15 진행, best 0.063(ep 11). RxRx3-core C ep 7 진행, best 0.117(ep 6) · S ep 6 진행, best 0.048(ep 5), 아직 상승 중·epoch당 약 53분. 처리량 run당 약 380–540 samples/s)
 - 사용자 결정(2026-10-15): 학습 시간이 길어도 E0은 계획대로 전체(36 run) 진행한다. 축소안(G0용 6 run)은 기각
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
