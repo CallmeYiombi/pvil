@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-15 06:31 UTC (E0 RxRx1 C/S epoch 6 학습 중. val R@1 by epoch 1–5: C 0.110 / 0.239 / 0.295 / **0.301** / 0.291(bad 1), S 0.013 / 0.027 / 0.045 / 0.035 / **0.047**. JUMP 분할 1,145/1,149, segment.py 3개 남음 → 끝나면 RxRx3-core E0 자동 시작)
+- 마지막 갱신: 2026-10-15 09:05 UTC (E0 4 run 학습 중, 오류 없음, run당 약 400 samples/s, GPU 메모리 run당 약 14 GB. 최고 val R@1: RxRx1 C 0.323(ep 8, ep 10 진행) · S 0.059(ep 8) · RxRx3-core C 0.061(ep 2) · S 0.008(ep 1). JUMP Stage A 분할 1,149/1,149 완료 06:59 → RxRx3-core E0 자동 시작)
 - 사용자 결정(2026-10-15): 학습 시간이 길어도 E0은 계획대로 전체(36 run) 진행한다. 축소안(G0용 6 run)은 기각
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
@@ -23,7 +23,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
 2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
-3. JUMP 분할 완료 후: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
+3. JUMP 분할 완료(2026-10-15 06:59). 원본이 overlay `/tmp/pvil_raw/`라 서버 재생성 전에 Stage B를 끝내야 한다. 다만 지금 cgroup 594/597 GiB(대부분 page cache)라 RxRx1 run이 끝난 뒤 시작 권장: `preview_seg.py` → `make_crops.py --dry-run` → Stage B → `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 5. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
 6. CD/SD view: 22×22 패치의 적용 해상도(150 crop / 224)가 원문에 없다 → 사용자에게 묻고 구현
@@ -31,10 +31,11 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 ## 진행 중
 
-- E0 학습 4 run, JUMP-CP Stage A 분할 (아래 실행 중인 작업)
+- E0 학습 4 run: RxRx1 C/S, RxRx3-core C/S (아래 실행 중인 작업)
 
 ## 완료
 
+- 2026-10-15 06:59 JUMP-CP Stage A 분할 완료(1,149 plates, `pvil_data/seg/jump_cp`). `pvil_wait_rxrx3`가 RxRx3-core E0 C/S를 GPU 1·2에 띄움
 - 2026-10-15 E0 파이프라인 구현: view(C, S; CD/SD는 TODO), 샘플러(63×8 + 대조군 8, 배치 층화, held-out 가드), A1 모델, multi-positive 손실, `scripts/{train,evaluate,summarize_e0,cache_crops,make_pert_embeddings}.py`, `scripts/run_e0_tmux.sh`, 테스트 7개(전체 36 passed). 스모크 학습·평가 확인
 - 2026-10-15 Stage B 완료: RxRx1 941,362 crops(QC 통과율 experiment별 0.74–0.94, HEPG2-05·09가 낮음), RxRx3-core 1,352,958 crops(plate별 0.89–0.90). memmap 캐시 `/tmp/pvil_cache/{rxrx1,rxrx3_core}`
 - 2026-10-14 ESM2 유전자 임베딩 734개(`pvil_data/pert_emb/rxrx3_core_esm2.npz`, 1,022 aa 초과 105개는 창 평균, C7orf26→INTS15·MPP5→PALS1은 NCBI 동의어로 해결)
@@ -58,10 +59,10 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_seg_jump` (창 s0–s15) | `GPUS="1 2" scripts/run_segment_tmux.sh pvil_seg_jump 16 12 configs/preprocess/jump_cp.yaml` (GPU 1·2로 재시작) | `/home/genetics/yiombi/pvil_data/logs/segment_20261014_2348_shard{0..15}.log` | 2026-10-14 23:48 UTC (재시작 시 878/1,149) |
-| `pvil_wait_rxrx3` | `scripts/start_rxrx3_e0_after_jump_seg.sh` — JUMP 분할 1,149 plate 완료 + segment.py 종료 확인 후 `pvil_e0_rxrx3_{c,s}`를 GPU 1·2에 띄움 | `/home/genetics/yiombi/pvil_data/logs/wait_rxrx3_e0.log`, 이후 `pvil_e0_rxrx3_{c,s}_<시각>.log` | 2026-10-15 01:05 UTC (00:25에 띄운 RxRx3 run은 데이터 대기 70–80%로 01:03에 중단) |
 | `pvil_e0_rxrx1_c` | 같은 형식, `dino_c_rxrx1.yaml` (GPU 1) | `.../pvil_e0_rxrx1_c_20261015_0037.log` | 2026-10-15 00:37 UTC |
 | `pvil_e0_rxrx1_s` | 같은 형식, `dino_s_rxrx1.yaml` (GPU 2) | `.../pvil_e0_rxrx1_s_20261015_0037.log` | 2026-10-15 00:37 UTC |
+| `pvil_e0_rxrx3_c` | `scripts/run_e0_job.sh 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1, `pvil_wait_rxrx3`가 띄움) | `.../pvil_e0_rxrx3_c_20261015_0659.log` | 2026-10-15 06:59 UTC |
+| `pvil_e0_rxrx3_s` | 같은 형식, `dino_s_rxrx3_core.yaml` (GPU 2) | `.../pvil_e0_rxrx3_s_20261015_0659.log` | 2026-10-15 06:59 UTC |
 
 ## 측정값
 
