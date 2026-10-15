@@ -456,7 +456,7 @@ CP-BG-Bench 아티팩트는 2026-10-14 기준 미공개다. (1) 제1저자에게
 - [ ] JUMP-CP 화합물 표적·MoA 주석 가용성
 - [ ] CWA-MSN, ABRA 코드 공개 여부
 - [ ] SubCell 가중치 라이선스와 입력 사양
-- [ ] 재구성 파이프라인에서 crop 내 전체 세포 마스크 확보 가능 여부 (N view 전제 조건)
+- [x] 재구성 파이프라인에서 crop 내 전체 세포 마스크 확보 가능 여부 (N view 전제 조건): crop zarr에 crop 안 모든 세포의 핵·세포 instance mask 저장 (2026-10-15, RxRx1·RxRx3-core)
 - [ ] B200 기준 1회 학습 비용 T 실측
 - [ ] NeurIPS 2027 마감일과 분량 규정
 - [ ] 방법 이름 PVIL 중복 검색
