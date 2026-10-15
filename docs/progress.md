@@ -61,7 +61,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | --- | --- | --- | --- |
 | `pvil_e0_rxrx1_c` | 같은 형식, `dino_c_rxrx1.yaml` (GPU 1) | `.../pvil_e0_rxrx1_c_20261015_0037.log` | 2026-10-15 00:37 UTC |
 | `pvil_e0_rxrx1_s` | 같은 형식, `dino_s_rxrx1.yaml` (GPU 2) | `.../pvil_e0_rxrx1_s_20261015_0037.log` | 2026-10-15 00:37 UTC |
-| `pvil_e0_rxrx3_c` | `scripts/run_e0_job.sh 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1, `pvil_wait_rxrx3`가 띄움) | `.../pvil_e0_rxrx3_c_20261015_0659.log` | 2026-10-15 06:59 UTC |
+| `pvil_e0_rxrx3_c` | `scripts/run_e0_tmux.sh pvil_e0_rxrx3_c 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1, `pvil_wait_rxrx3`가 띄움) | `.../pvil_e0_rxrx3_c_20261015_0659.log` | 2026-10-15 06:59 UTC |
 | `pvil_e0_rxrx3_s` | 같은 형식, `dino_s_rxrx3_core.yaml` (GPU 2) | `.../pvil_e0_rxrx3_s_20261015_0659.log` | 2026-10-15 06:59 UTC |
 
 ## 측정값
