@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-15 00:45 UTC (E0 RxRx3-core·RxRx1 × C/S seed 0 학습 중, JUMP 분할 913/1,149)
+- 마지막 갱신: 2026-10-15 02:45 UTC (E0 RxRx1 C/S 학습 중: C epoch 1 val R@1 0.110, S 0.013. JUMP 분할 1,010/1,149, 05:45 UTC 무렵 끝나면 RxRx3-core E0 자동 시작)
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
 ## 세션 시작 방법
