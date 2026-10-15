@@ -56,13 +56,15 @@ class SiLUHead(nn.Module):
 
 
 class ImageEncoder(nn.Module):
-    def __init__(self, in_channels: int, backbone: str, lora: dict, out_dim: int, pretrained: bool = True):
+    def __init__(self, in_channels: int, backbone: str, lora: dict, out_dim: int, pretrained: bool = True,
+                 grad_checkpointing: bool = False):
         super().__init__()
         import timm
         from peft import LoraConfig, get_peft_model
 
         self.adapter = ChannelAdapter(in_channels)
         bb = timm.create_model(backbone, pretrained=pretrained, num_classes=0)
+        bb.set_grad_checkpointing(grad_checkpointing)   # 메모리 절약용. 계산 결과는 같고 step이 느려진다
         cfg = LoraConfig(r=lora["r"], lora_alpha=lora["alpha"], lora_dropout=lora["dropout"],
                          target_modules=lora["target_modules"])
         self.backbone = get_peft_model(bb, cfg)        # LoRA 외 trunk는 고정된다

@@ -151,7 +151,8 @@ def main():
         pos = {l: i for i, l in enumerate(z["labels"])}
         table = torch.from_numpy(z["emb"][[pos[p] for p in store.perts]])
     m = cfg.model
-    model = ImageEncoder(store.meta["n_channels"], m.backbone, OmegaConf.to_container(m.lora), m.image_head.out_dim).cuda()
+    model = ImageEncoder(store.meta["n_channels"], m.backbone, OmegaConf.to_container(m.lora), m.image_head.out_dim,
+                         grad_checkpointing=tr.get("grad_checkpointing", False)).cuda()
     pert = PertEncoder(store.n_perts, m.pert_head.out_dim, table=table, learned_dim=cfg.learned_pert_dim).cuda()
     tau = LearnableTemperature(cfg.loss.tau_init, tuple(cfg.loss.tau_clamp)).cuda()
     groups = param_groups(model, pert, tau, tr.lr, tr.weight_decay)

@@ -9,6 +9,6 @@ case "$GPU" in 1|2) ;; *) echo "GPU는 1 또는 2만 허용" >&2; exit 1 ;; esac
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LOG=/home/genetics/yiombi/pvil_data/logs/${SESSION}_$(date -u +%Y%m%d_%H%M).log
 tmux new-session -d -s "$SESSION" \
-  "cd $REPO && source scripts/env.sh && export CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 && \
+  "cd $REPO && source scripts/env.sh && export CUDA_VISIBLE_DEVICES=$GPU OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True && \
    (python scripts/train.py $CONFIG --workers $WORKERS && python scripts/evaluate.py $CONFIG) 2>&1 | grep --line-buffered -v -i warn | tee $LOG"
 echo "session=$SESSION gpu=$GPU log=$LOG"

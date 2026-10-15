@@ -64,6 +64,8 @@ train:
   schedule: {type: cosine, warmup_frac: 0.1}
   precision: bf16
   grad_clip: 5.0
+  # 공유 GPU 메모리 부족 대응(구현 선택, 결과 동일). T에 재계산 비용이 들어간다. decisions.md 2026-10-15
+  grad_checkpointing: true
   max_epochs: 25
   early_stopping: {patience: 5, monitor: val_macro_img2pert_r1}
   augment: {hflip: true, vflip: true, rotate_deg: [0, 90], brightness: 0.1, contrast: 0.1}
