@@ -23,7 +23,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
 2. E0 4 run이 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다
-3. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`). 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
+3. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`). **완료 확인:** 로그 끝에 `DONE`과 `EXIT 0`이 있으면 끝난 것이다(`tail -3 /home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log`). 진행 줄은 plate 20개마다 `[k/1149]`. 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 4. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 5. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
 6. CD/SD view 구현 완료(2026-10-15, 224 기준, 패치 → 기하 증강 순서 확정, `configs/E0/dino_{cd,sd}_{rxrx1,rxrx3_core}.yaml`). 실행은 GPU·메모리 여유를 보고 `scripts/run_e0_tmux.sh`로 띄운다. "증강 뒤 패치"는 E2 민감도 분석 후보
@@ -59,7 +59,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
-| `pvil_stageB_jump` | `make_crops.py configs/preprocess/jump_cp.yaml --workers 6` (nice 10, ionice idle급 7, 스레드 4. RxRx3-core 학습 보호용으로 기본 16에서 줄임) | `/home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log` | 2026-10-15 15:24 UTC |
+| `pvil_stageB_jump` | `make_crops.py configs/preprocess/jump_cp.yaml --workers 6` (nice 10, ionice best-effort 최저 7, 스레드 4. RxRx3-core 학습 보호용으로 기본 16에서 줄임) | `/home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log` | 2026-10-15 15:24 UTC |
 | `pvil_e0_rxrx3_c` | `scripts/run_e0_tmux.sh pvil_e0_rxrx3_c 1 configs/E0/dino_c_rxrx3_core.yaml` (GPU 1, `pvil_wait_rxrx3`가 띄움) | `.../pvil_e0_rxrx3_c_20261015_0659.log` | 2026-10-15 06:59 UTC |
 | `pvil_e0_rxrx3_s` | 같은 형식, `dino_s_rxrx3_core.yaml` (GPU 2) | `.../pvil_e0_rxrx3_s_20261015_0659.log` | 2026-10-15 06:59 UTC |
 
