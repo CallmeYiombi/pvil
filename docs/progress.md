@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-16 13:05 UTC (G0 = 정성 기준 Q1–Q7, 경로 A 확정. RxRx1 CD/SD 학습 시작(GPU 1·2), RxRx3-core CD/SD는 mAP 진단 종료 후 자동 시작. G1–G3·D4 진단 대기 중. JUMP Stage B `[560/1149]`. 대기 스크립트 2개는 세션 scratchpad에 있어 서버 재생성 시 사라진다 → 그 경우 실행 중인 작업 표의 명령으로 다시 띄운다)
+- 마지막 갱신: 2026-10-16 14:30 UTC (RxRx1 CD ep3 val R@1 0.293·SD ep2 0.030 학습 중(GPU 1·2). JUMP Stage B `[720/1149]` crop 572,037개(61%), 최근 속도로 약 5 h 남음. RxRx3-core mAP 진단은 S 정의 B·C 계산 중(S 정의 A 0.949, 무작위 0.971 → A 배제 재확인). 끝나면 G1–G3·D4 진단과 RxRx3-core CD/SD 자동 시작. **RxRx3-core CD/SD는 RxRx1 CD/SD와 같은 GPU 1·2를 공유한다**(run당 약 14 GB, GPU당 여유 약 20 GB로 빠듯함, 공유 중이라 이 run들의 T는 보고하지 않음). 대기 스크립트 2개는 세션 scratchpad에 있어 서버 재생성 시 사라진다 → 그 경우 실행 중인 작업 표의 명령으로 다시 띄운다)
 - 사용자 결정(2026-10-15): 학습 시간이 길어도 E0은 계획대로 전체(36 run) 진행한다. 축소안(G0용 6 run)은 기각
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
@@ -24,7 +24,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
 2. **RxRx3-core mAP 정의 진단 결과 확인(이슈 0).** `pvil_diag_map_rxrx3`(C → S 순서, 로그 끝에 `EXIT`)가 끝나면 `results/E0/dino_{c,s}/rxrx3_core/seed0/map_defs.json`을 원문 C 0.626·S 0.469, S/C 비율 0.75와 비교해 이슈 0에 기록한다
 3. **G0 = 정성 기준 Q1–Q7, 경로 A(파이프라인 고정, 원래 계획대로) 확정(2026-10-16, decisions.md).** 진단은 `docs/tasks/P0_g0_diagnosis.md` §4의 축소 범위만: G1–G3·D4는 `pvil_diag_g0`(mAP 진단 종료 후 자동 시작)로 실행, D1·D2는 나중에 한다(사용자 결정 2026-10-16, 논문 부록 작성 시). 결과 → `python scripts/diag_eval.py --summarize` → `results/E0_diag/summary.md` 커밋. 정성 G0 판정에는 CD/SD·JUMP·CP 예측 결과가 필요하다(다음 할 일 4·7·8)
-4. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`, 2026-10-16 08:45 기준 `[540/1149]`, crop 435,717개(46%). 최근 속도로 남은 시간 약 60 h, 전체 평균 속도로는 약 20 h). **완료 확인:** 로그 끝에 `DONE`과 `EXIT 0`이 있으면 끝난 것이다(`tail -3 /home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log`). 진행 줄은 plate 20개마다 `[k/1149]`. 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
+4. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`, 2026-10-16 14:20 기준 `[720/1149]`, crop 572,037개(61%), 최근 속도로 약 5 h 남음). **완료 확인:** 로그 끝에 `DONE`과 `EXIT 0`이 있으면 끝난 것이다(`tail -3 /home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log`). 진행 줄은 plate 20개마다 `[k/1149]`. 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 5. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 6. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
 7. CD/SD view 구현 완료(2026-10-15, 224 기준, 패치 → 기하 증강 순서 확정, `configs/E0/dino_{cd,sd}_{rxrx1,rxrx3_core}.yaml`). 실행은 GPU·메모리 여유를 보고 `scripts/run_e0_tmux.sh`로 띄운다. 2026-10-16 12:55 RxRx1 CD/SD 시작, RxRx3-core CD/SD는 mAP 진단 종료 후 자동 시작(사용자 지시). D1·D2는 나중에(사용자 결정 2026-10-16). "증강 뒤 패치"는 E2 민감도 분석 후보
