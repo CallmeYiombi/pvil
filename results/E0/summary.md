@@ -10,11 +10,31 @@
 
 | 데이터셋 | view | 지표 | 원문 | 우리 | Δ | G0 |
 | --- | --- | --- | --- | --- | --- | --- |
+| rxrx1 | C | R@1 | 0.552 | 0.666 | +0.114 |  |
+| rxrx1 | C | R@10 | 0.742 | 0.858 | +0.116 | 미달 |
+| rxrx1 | C | mAP | 0.756 | 0.993 | +0.237 | 미달 |
+| rxrx1 | C | CP r | 0.487 | — | — |  |
+| rxrx1 | S | R@1 | 0.137 | 0.309 | +0.172 |  |
+| rxrx1 | S | R@10 | 0.322 | 0.571 | +0.249 | 미달 |
+| rxrx1 | S | mAP | 0.251 | 0.949 | +0.698 | 미달 |
+| rxrx1 | S | CP r | 0.409 | — | — |  |
+| rxrx3_core | C | R@1 | 0.075 | 0.154 | +0.079 |  |
+| rxrx3_core | C | R@10 | 0.296 | 0.458 | +0.162 | 미달 |
+| rxrx3_core | C | mAP | 0.626 | 0.951 | +0.325 | 미달 |
+| rxrx3_core | C | CP r | 0.217 | — | — |  |
+| rxrx3_core | S | R@1 | 0.025 | 0.108 | +0.083 |  |
+| rxrx3_core | S | R@10 | 0.123 | 0.361 | +0.238 | 미달 |
+| rxrx3_core | S | mAP | 0.469 | 0.949 | +0.480 | 미달 |
+| rxrx3_core | S | CP r | 0.283 | — | — |  |
 
 ## Harmony 전 (참고)
 
 | 데이터셋 | view | R@1 | R@10 | mAP |
 | --- | --- | --- | --- | --- |
+| rxrx1 | C | 0.499 | 0.755 | 0.987 |
+| rxrx1 | S | 0.164 | 0.372 | 0.930 |
+| rxrx3_core | C | 0.151 | 0.459 | 0.945 |
+| rxrx3_core | S | 0.110 | 0.374 | 0.944 |
 
 ## 학습 비용 T (상한)
 
@@ -22,6 +42,10 @@
 
 | 데이터셋 | view | epoch (best) | step | samples/s | 학습 h | val h | T (GPU-h, 벽시계) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| rxrx1 | C | 15 (10) | 25,155 | 315 | 11.37 | 0.38 | 12.03 |
+| rxrx1 | S | 16 (11) | 26,832 | 302 | 12.62 | 0.42 | 13.35 |
+| rxrx3_core | C | 24 (19) | 56,328 | 543 | 14.74 | 0.81 | 15.82 |
+| rxrx3_core | S | 25 (25) | 58,675 | 454 | 18.40 | 0.92 | 19.63 |
 
 ## 원문과의 차이
 
@@ -33,7 +57,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | rxrx1 | 12,581 | 1,108 | 12,229 | 1,108 | 12,223 | 941,362 | Stage B 완료 |
 | rxrx3_core | 104,166 | 735 | 81,314 | 734 | 80,879 | 1,352,958 | Stage B 완료 |
-| jump_cp | 28,003 | 1,466 | 28,003 | 907 | — | — | well 정의만 (crop 전) |
+| jump_cp | 28,003 | 1,466 | 28,003 | 907 | 27,722 | 943,614 | Stage B 완료 |
 
 ### 원문에 없거나 원문과 다를 수 있는 결정 (`docs/decisions.md`에서 자동 수집)
 
@@ -56,6 +80,9 @@
 | 2026-10-14 | 원문 없음 | 미니배치 512 = perturbation 63개 × 8 + 대조군 8개(64 슬롯 중 1개를 대조군에 고정). 대조군은 같은 대조군 라벨을 공유하는 positive 집합 | 학습 (사용자 결정) |
 | 2026-10-14 | 원문 없음 | A1 구현 세부값 : 평가 임베딩 = image projection head 출력 128차원(research_plan.md "CP-BG-Bench의 128차원과 맞춤"). head hidden = 입력 차원, skip = 선형 사영. 어댑터 1×1 conv 초기값 = 1/C, affine은 ImageNet mean/std로 초기화. 입력 = uint8/255. | 학습·평가 (사용자 승인: E0 계획) |
 | 2026-10-15 | 원문 차이 | ViT activation checkpointing 켬(`train.grad_checkpointing: true`), `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` | 학습·T |
+| 2026-10-15 | 원문 없음 | CD/SD 밀도 패치는 224×224 입력 해상도에 그린다(22×22 px, 모서리에서 7 px 안쪽, 4개, 모든 채널). 순서 = 리사이즈 → 밝기·대비 → C/S 마스킹 → 패치 → 기하 증강 | view, E0 CD/SD |
+| 2026-10-15 | 원문 차이 | CD/SD 패치 강도 = round((fov_n_cells − min) / (max − min) × 255) / 255. min·max는 학습 배치 세포에서만 구한다 | view, E0 CD/SD |
+| 2026-10-15 | 원문 없음 | CD/SD 패치는 기하 증강 전에 그린다(패치 → flip·회전). 0–90° 연속 회전에서 학습 샘플의 약 52%(22–68°)는 패치가 화면 밖으로 밀려 사라지고, 0–90° 균등일 때 패치 픽셀은 평균 29%만 남는다(합성 측정). 평가에는 증강이 없어 영향 없음 | view, E0 CD/SD, E2 |
 
 ### 계산 환경 (run별 `run_info.json`)
 
@@ -65,7 +92,7 @@
 | --- | --- | --- | --- | --- |
 | rxrx1 | C | NVIDIA B200 | 0bf56f99da | torch 2.9.1+cu130, timm 1.0.30, peft 0.21.2, harmonypy 0.2.0, copairs 0.5.5, pycytominer 1.7.1, cellpose 4.2.1.1 |
 | rxrx1 | S | NVIDIA B200 | 0bf56f99da | torch 2.9.1+cu130, timm 1.0.30, peft 0.21.2, harmonypy 0.2.0, copairs 0.5.5, pycytominer 1.7.1, cellpose 4.2.1.1 |
-| rxrx3_core | C | NVIDIA B200 | 0bf56f99da | torch 2.9.1+cu130, timm 1.0.30, peft 0.21.2, harmonypy 0.2.0, copairs 0.5.5, pycytominer 1.7.1, cellpose 4.2.1.1 |
-| rxrx3_core | S | NVIDIA B200 | 0bf56f99da | torch 2.9.1+cu130, timm 1.0.30, peft 0.21.2, harmonypy 0.2.0, copairs 0.5.5, pycytominer 1.7.1, cellpose 4.2.1.1 |
+| rxrx3_core | C | NVIDIA B200 | 6116fcfdea | torch 2.9.1+cu130, timm 1.0.30, peft 0.21.2, harmonypy 0.2.0, copairs 0.5.5, pycytominer 1.7.1, cellpose 4.2.1.1 |
+| rxrx3_core | S | NVIDIA B200 | 6116fcfdea | torch 2.9.1+cu130, timm 1.0.30, peft 0.21.2, harmonypy 0.2.0, copairs 0.5.5, pycytominer 1.7.1, cellpose 4.2.1.1 |
 
 - seed 변동: 원문과 이 표 모두 구성당 1회 실행이라, 차이가 seed 변동인지 구분할 수 없다. seed 1, 2 추가 후(P0 작업 9) 다시 판단한다.

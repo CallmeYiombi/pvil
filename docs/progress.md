@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-16 01:00 UTC (RxRx1 C/S, RxRx3-core C 학습·평가 완료. RxRx3-core S ep 23/25 진행, best val R@1 0.065. **JUMP Stage B 정체 의심**: 로그가 10-15 19:16 `[160/1149]` 이후 멈춤, 컨테이너 메모리가 상한 근처 → 이슈 10)
+- 마지막 갱신: 2026-10-16 10:50 UTC (E0 4 run 완료: RxRx1 C/S, RxRx3-core C/S. 4개 모두 R@10이 원문보다 +0.12–0.25 높아 G0 미달. `results/E0/summary.md` 생성. RxRx3-core mAP 정의 A–D 진단 실행 중. JUMP Stage B는 정체가 아니라 저속 진행 중 `[540/1149]`)
 - 사용자 결정(2026-10-15): 학습 시간이 길어도 E0은 계획대로 전체(36 run) 진행한다. 축소안(G0용 6 run)은 기각
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
@@ -22,20 +22,22 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 ## 다음 할 일
 
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
-2. RxRx3-core S가 끝나면(train.py → evaluate.py 자동 실행): `python scripts/summarize_e0.py` → `results/E0/summary.md` 커밋, T·처리량·GPU 점유를 아래 측정값에 기록, held-out 평가 실행 기록을 decisions.md에 남긴다. 이어서 RxRx3-core C/S에 `scripts/diagnose_map_defs.py`로 mAP 정의 A–D를 계산해 원문 값과 비교한다(이슈 0)
-3. **JUMP Stage B 정체 확인(이슈 10).** RxRx3-core S가 끝나 메모리가 풀린 뒤에도 로그가 `[160/1149]`에서 움직이지 않으면 재시작을 검토한다. 재시작 전에 `make_crops.py`가 이미 쓴 plate를 건너뛰고 이어서 할 수 있는지 확인한다(사용자 확인 후 중단)
-4. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`). **완료 확인:** 로그 끝에 `DONE`과 `EXIT 0`이 있으면 끝난 것이다(`tail -3 /home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log`). 진행 줄은 plate 20개마다 `[k/1149]`. 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
+2. **RxRx3-core mAP 정의 진단 결과 확인(이슈 0).** `pvil_diag_map_rxrx3`(C → S 순서, 로그 끝에 `EXIT`)가 끝나면 `results/E0/dino_{c,s}/rxrx3_core/seed0/map_defs.json`을 원문 C 0.626·S 0.469, S/C 비율 0.75와 비교해 이슈 0에 기록한다
+3. **G0 미달(recall이 원문보다 높음) 원인 진단 계획 수립.** 4개 run 모두 R@10이 원문보다 +0.12–0.25 높다. S/C 비율(R@10)은 원문 RxRx1 0.43·RxRx3-core 0.42, 우리 0.67·0.79. 두 데이터셋에 공통인 원인(학습 설정, 샘플링, 후처리, 갤러리 구성)을 찾는다. 계획은 사용자 승인 후 실행
+4. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`, 2026-10-16 08:45 기준 `[540/1149]`, crop 435,717개(46%). 최근 속도로 남은 시간 약 60 h, 전체 평균 속도로는 약 20 h). **완료 확인:** 로그 끝에 `DONE`과 `EXIT 0`이 있으면 끝난 것이다(`tail -3 /home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log`). 진행 줄은 plate 20개마다 `[k/1149]`. 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 5. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 6. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
-7. CD/SD view 구현 완료(2026-10-15, 224 기준, 패치 → 기하 증강 순서 확정, `configs/E0/dino_{cd,sd}_{rxrx1,rxrx3_core}.yaml`). 실행은 GPU·메모리 여유를 보고 `scripts/run_e0_tmux.sh`로 띄운다. GPU 1의 RxRx3-core C가 끝났지만, 메모리 상한(이슈 9·10) 때문에 JUMP Stage B가 정리될 때까지 띄우지 않는다. "증강 뒤 패치"는 E2 민감도 분석 후보
+7. CD/SD view 구현 완료(2026-10-15, 224 기준, 패치 → 기하 증강 순서 확정, `configs/E0/dino_{cd,sd}_{rxrx1,rxrx3_core}.yaml`). 실행은 GPU·메모리 여유를 보고 `scripts/run_e0_tmux.sh`로 띄운다. GPU 1·2 모두 비어 있다(2026-10-16). 지금 띄우면 메모리 상한(이슈 9·10) 때문에 JUMP Stage B가 더 느려질 수 있으므로, 동시 실행 여부는 사용자가 정한다. "증강 뒤 패치"는 E2 민감도 분석 후보
 8. CP feature prediction(cp_measure 특징)과 scIB 평가 구현
 
 ## 진행 중
 
-- E0 RxRx3-core S 학습 (ep 23/25), JUMP Stage B crop 생성 (아래 실행 중인 작업)
+- RxRx3-core mAP 정의 진단, JUMP Stage B crop 생성 (아래 실행 중인 작업). PVIL 학습은 없음
 
 ## 완료
 
+- 2026-10-16 10:45 `scripts/summarize_e0.py` → `results/E0/summary.md`(4 run, R@10·mAP 모두 G0 미달)
+- 2026-10-16 02:37 E0 RxRx3-core S 학습·평가 완료(P-orig, seed 0, 25 epoch 모두 실행, **best ep 25 = 마지막 epoch**, val R@1 0.065로 끝까지 조금씩 상승, epoch 상한에서 미수렴). post-Harmony R@1 0.108·R@10 0.361(원문 0.025·0.123), replicate mAP 0.949(원문 0.469, 정의 A). pre-Harmony R@10 0.374·mAP 0.945. T = 19.6 GPU-시간, 453 samples/s(학습 18.4 h + 검증 0.9 h + 임베딩 0.3 h). `results/E0/dino_s/rxrx3_core/seed0/`
 - 2026-10-15 22:49 E0 RxRx3-core C 학습·평가 완료(P-orig, seed 0, 24 epoch, best ep 19, val R@1 0.142). post-Harmony R@1 0.154·R@10 0.458(원문 0.075·0.296), replicate mAP 0.951(원문 0.626, 정의 A). pre-Harmony R@10 0.459. T = 15.8 GPU-시간, 543 samples/s. `results/E0/dino_c/rxrx3_core/seed0/`
 
 - 2026-10-15 06:59 JUMP-CP Stage A 분할 완료(1,149 plates, `pvil_data/seg/jump_cp`). `pvil_wait_rxrx3`가 RxRx3-core E0 C/S를 GPU 1·2에 띄움
@@ -63,13 +65,13 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | tmux 세션 | 명령 | 로그 경로 | 시작 시각 |
 | --- | --- | --- | --- |
 | `pvil_stageB_jump` | `make_crops.py configs/preprocess/jump_cp.yaml --workers 6` (nice 10, ionice best-effort 최저 7, 스레드 4. RxRx3-core 학습 보호용으로 기본 16에서 줄임) | `/home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log` | 2026-10-15 15:24 UTC |
-| `pvil_e0_rxrx3_s` | `scripts/run_e0_tmux.sh pvil_e0_rxrx3_s 2 configs/E0/dino_s_rxrx3_core.yaml` (GPU 2, `pvil_wait_rxrx3`가 띄움. 같이 띄운 C는 2026-10-15 22:49 종료) | `.../pvil_e0_rxrx3_s_20261015_0659.log` | 2026-10-15 06:59 UTC |
+| `pvil_diag_map_rxrx3` | `diagnose_map_defs.py` RxRx3-core C → S (nice 10, 스레드 12) | `/home/genetics/yiombi/pvil_data/logs/diag_map_defs_rxrx3_core_20261016_1045.log` | 2026-10-16 10:45 UTC |
 
 ## 측정값
 
 | 항목 | 값 | 측정일 | 비고 |
 | --- | --- | --- | --- |
-| T (B200, A1 1회 학습) | RxRx1 C 12.0 GPU-시간(15 epoch, early stop, best ep 10, 평균 315 samples/s). RxRx3-core C 15.8 GPU-시간(24 epoch, early stop, best ep 19, 56,328 step, 평균 543 samples/s, 학습 14.7 h + 검증 0.8 h + 임베딩 0.3 h). 나머지 측정 중 | 2026-10-15 | 각 run의 `timing.json`·`gpu_log.csv`. 공유 GPU라 상한으로 표기 |
+| T (B200, A1 1회 학습) | RxRx1 C 12.0 GPU-시간(15 epoch, early stop, best ep 10, 평균 315 samples/s). RxRx3-core C 15.8 GPU-시간(24 epoch, early stop, best ep 19, 56,328 step, 평균 543 samples/s, 학습 14.7 h + 검증 0.8 h + 임베딩 0.3 h). RxRx3-core S 19.6 GPU-시간(25 epoch, 상한 도달, 58,675 step, 453 samples/s). RxRx1 S 13.4 GPU-시간(16 epoch, early stop, best ep 11, 302 samples/s) | 2026-10-16 | 각 run의 `timing.json`·`gpu_log.csv`. 공유 GPU라 상한으로 표기 |
 | E0 학습 처리량(초기, 배치 512, checkpointing, GPU당 run 2개 + 분할 8개 + 타 사용자 학습 공존) | 110–224 samples/s | 2026-10-15 | RxRx3-core 1 epoch(2,350 step) ≈ 1.5–2.5 h, 최대 25 epoch |
 | δ (비열등성 마진) | | | A1 seed 표준편차 × 2, E1 전에 고정 |
 | E0 RxRx1 학습 처리량 (분할 거의 종료 후) | C 349–370, S 365–403 samples/s | 2026-10-15 06:30 | 분할 16개가 돌던 때(C 225, S 295)보다 1.4–1.6배. 1 epoch(약 1,680 step) ≈ 1.1 h였음 |
@@ -102,4 +104,4 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 7. RxRx1 HepG2 well 수 불일치: 원문 12,581 wells / 1,108 perturbation, 메타데이터 13,547 wells(처리군 12,179 + 양성대조군 1,318 + 음성대조군 50) / siRNA 라벨 1,139. 분할·QC 뒤 재비교
 8. RxRx1 sphering: 대조군(EMPTY) well이 50개뿐인데 임베딩은 128차원이라, 대조군 공분산의 계수(rank)가 ≤ 49다. ZCA-cor(epsilon 1e-6)가 대조군에서 분산이 없는 방향을 크게 키울 수 있다. 원문 사양대로 진행하되, G0가 어긋나면 이것을 먼저 진단한다
 9. **메모리 상한(cgroup) 641 GB:** 서버 RAM은 2.2 TB지만 컨테이너 상한은 641 GB다(`/sys/fs/cgroup/memory.max`). JUMP 분할 16개가 약 250 GB를 쓰는 동안에는 page cache로 약 333 GB만 남아, crop 캐시(RxRx3-core 227 + RxRx1 158 = 385 GB)가 다 올라가지 않는다. RxRx3-core run이 데이터 대기 70–80%(57 samples/s)로 떨어져 중단했고, 분할이 끝나면 자동으로 재시작한다. 앞으로 JUMP 캐시까지 더하면 동시 학습 데이터셋 수를 이 상한에 맞춰 정한다
-10. **JUMP Stage B 정체 의심(2026-10-16 01:00 UTC 확인):** 로그가 10-15 19:16 `[160/1149]`(133,443/943,614 crops) 이후 약 5.7시간째 그대로다. 작업자 6개는 각각 CPU 약 88%로 돌고 있지만, `crops.zarr`에는 00:30 이후 새로 쓰인 파일이 없다. 컨테이너 메모리 사용량은 상한 641 GB 중 625–637 GB이고, `memory.events`의 `max`가 181,506회다(`oom_kill` 0). RxRx3-core S 학습의 crop 캐시와 메모리를 다투면서 페이지 회수만 반복하는 것으로 추정한다. 앞서 `[60]`에서 `[80]`으로 넘어갈 때도 207분이 걸렸다(19 → 226분). 조치: RxRx3-core S가 끝난 뒤 진행되는지 다시 확인한다. 프로세스는 아직 중단하지 않았다
+10. **JUMP Stage B 저속 진행(정체 아님, 2026-10-16 08:55 확인):** `[160]` 이후 다시 진행해 08:45에 `[540/1149]`. 메모리는 여전히 상한 근처(632/641 GB, page cache 459 GB, `memory.events` max 186,309, oom_kill 0)이고 RxRx3-core S가 끝난 뒤에도 느리다(plate 20개당 약 126분). 아래는 01:00 당시 기록.  로그가 10-15 19:16 `[160/1149]`(133,443/943,614 crops) 이후 약 5.7시간째 그대로다. 작업자 6개는 각각 CPU 약 88%로 돌고 있지만, `crops.zarr`에는 00:30 이후 새로 쓰인 파일이 없다. 컨테이너 메모리 사용량은 상한 641 GB 중 625–637 GB이고, `memory.events`의 `max`가 181,506회다(`oom_kill` 0). RxRx3-core S 학습의 crop 캐시와 메모리를 다투면서 페이지 회수만 반복하는 것으로 추정한다. 앞서 `[60]`에서 `[80]`으로 넘어갈 때도 207분이 걸렸다(19 → 226분). 조치: RxRx3-core S가 끝난 뒤 진행되는지 다시 확인한다. 프로세스는 아직 중단하지 않았다
