@@ -23,7 +23,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 
 1. **세션 시작 시 먼저 확인:** `tmux ls`, 아래 "실행 중인 작업"의 로그(Traceback, OOM). E0 run은 `scripts/run_e0_job.sh`가 GPU 여유(≥ 25 GB) 확인 후 시작하고 OOM이면 최대 3회 재시도한다. 여유 확인: `python3 scripts/gpu_free_gb.py 1`
 2. **RxRx3-core mAP 정의 진단 결과 확인(이슈 0).** `pvil_diag_map_rxrx3`(C → S 순서, 로그 끝에 `EXIT`)가 끝나면 `results/E0/dino_{c,s}/rxrx3_core/seed0/map_defs.json`을 원문 C 0.626·S 0.469, S/C 비율 0.75와 비교해 이슈 0에 기록한다
-3. **G0 미달(recall이 원문보다 높음) 원인 진단 계획 수립.** 4개 run 모두 R@10이 원문보다 +0.12–0.25 높다. S/C 비율(R@10)은 원문 RxRx1 0.43·RxRx3-core 0.42, 우리 0.67·0.79. 두 데이터셋에 공통인 원인(학습 설정, 샘플링, 후처리, 갤러리 구성)을 찾는다. 계획은 사용자 승인 후 실행
+3. **G0 = 정성 기준 Q1–Q7, 경로 A(파이프라인 고정, 원래 계획대로) 확정(2026-10-16, decisions.md).** 진단은 `docs/tasks/P0_g0_diagnosis.md` §4의 축소 범위만: G1–G3·D4는 `pvil_diag_g0`(mAP 진단 종료 후 자동 시작)로 실행, D1·D2는 사용자 결정 대기. 결과 → `python scripts/diag_eval.py --summarize` → `results/E0_diag/summary.md` 커밋. 정성 G0 판정에는 CD/SD·JUMP·CP 예측 결과가 필요하다(다음 할 일 4·7·8)
 4. JUMP Stage B 실행 중(2026-10-15 15:24~, `pvil_stageB_jump`, 2026-10-16 08:45 기준 `[540/1149]`, crop 435,717개(46%). 최근 속도로 남은 시간 약 60 h, 전체 평균 속도로는 약 20 h). **완료 확인:** 로그 끝에 `DONE`과 `EXIT 0`이 있으면 끝난 것이다(`tail -3 /home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log`). 진행 줄은 plate 20개마다 `[k/1149]`. 사전 점검: 분할 미리보기 10개 source 정상(`pvil_data/seg/jump_cp/_preview/by_source_q0.5.png`), dry-run well 28,003개(원문 표와 일치), 화합물 907, crop 943,614개(held-out 33,761), (화합물, source) 6,694쌍 중 134쌍은 목표 100개 미달. 끝나면 `cache_crops.py` → ECFP4 임베딩(아직 없음) → E0 JUMP C/S
 5. 결정 완료(2026-10-15): S-clip은 E2 민감도 분석에 포함, JUMP 부분집합은 현행 907개 유지
 6. 처리량 개선 후보(미승인, 결과 수치 불변): 메모리 여유가 있으면 activation checkpointing 끄기(약 +27%), torch.compile, step마다의 `loss.item()` 동기화 제거. 실행 중인 run에는 적용하지 않는다. 비교용으로 경합 없는 처리량을 잴 기회가 생기면 측정
@@ -66,6 +66,7 @@ python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda
 | --- | --- | --- | --- |
 | `pvil_stageB_jump` | `make_crops.py configs/preprocess/jump_cp.yaml --workers 6` (nice 10, ionice best-effort 최저 7, 스레드 4. RxRx3-core 학습 보호용으로 기본 16에서 줄임) | `/home/genetics/yiombi/pvil_data/logs/pvil_stageB_jump_20261015_1524.log` | 2026-10-15 15:24 UTC |
 | `pvil_diag_map_rxrx3` | `diagnose_map_defs.py` RxRx3-core C → S (nice 10, 스레드 12) | `/home/genetics/yiombi/pvil_data/logs/diag_map_defs_rxrx3_core_20261016_1045.log` | 2026-10-16 10:45 UTC |
+| `pvil_diag_g0` | scratchpad `run_diag_g0.sh`: mAP 진단 `EXIT` 대기 → `diag_eval` G1·G2 → D4(head, 4 run) → `diag_embed --variant intensity`(GPU 1) → G3 → `--summarize`. 끝나면 로그 끝에 `EXIT 0` | `/home/genetics/yiombi/pvil_data/logs/pvil_diag_g0_20261016_1254.log` | 2026-10-16 12:54 UTC (대기 시작) |
 
 ## 측정값
 

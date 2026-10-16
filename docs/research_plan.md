@@ -377,7 +377,7 @@ CP-BG-Bench 아티팩트는 2026-10-14 기준 미공개다. (1) 제1저자에게
 
 | 관문 | Go 조건 | No-go 시 대응 |
 | --- | --- | --- |
-| G0 | DINO C·S 구성의 R@10과 replicate mAP(post-Harmony, P-orig)가 3개 데이터셋 모두 원 논문 값과 절대 0.03 이내 | 파이프라인 차이 진단. 원 저자 아티팩트가 공개되면 기준선을 대체하고 차이를 부록에 보고 |
+| G0 | **(2026-10-16 정성 재현으로 변경, 사용자 승인)** DINO × 4 view × 3 데이터셋(seed 0, P-orig, post-Harmony)에서 원문 현상 Q1–Q6 모두 성립: Q1 R@10 C > S(3개 모두) · Q2 RxRx1·RxRx3-core에서 (SD−S)/(C−S) < 0.5 · Q3 \|CD−C\| < \|C−S\|(3개 모두) · Q4 C의 R@10 RxRx1 > RxRx3-core > JUMP · Q5 Harmony 전후 R@10 차이가 RxRx3-core에서 가장 작음 · Q6 JUMP·RxRx3-core에서 CP r S ≥ C. Q7 replicate mAP 격차(C−S) RxRx1 > JUMP는 mAP 정의 확정 후 판정(정의는 학습 임베딩이 무작위보다 확실히 높아야 함). 수치 크기 차이(예: S/C 비율)는 기준이 아니며 부록에 그대로 보고. 이전 기준(R@10·mAP가 원문과 절대 0.03 이내)은 폐기 | 미달 현상을 부록에 보고하고, 해당 현상에 의존하는 가설(H1–H3)의 해석을 재검토. 원 저자 아티팩트가 공개되면 기준선을 대체하고 차이를 부록에 보고 |
 | G1 | N view 결과로 맥락 성분의 전이 여부가 판정됨(H1 지지 또는 기각) | H1 기각(N ≈ S) 시 B view로 배경 통계의 기여를 규명하고, 맥락 성분 정의를 "배치 간 일관된 배경 신호"로 수정 |
 | G2 | validation 배치에서 PVIL이 A1-C와 B4를 3개 중 2개 이상 데이터셋에서 이기고, validation replicate mAP는 비열등 | §10의 전환 경로 |
 

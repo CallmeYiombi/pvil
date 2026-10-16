@@ -186,7 +186,7 @@
 5. **비이미지 베이스라인 G1–G3** → cross-batch R@10 (지표 오염 하한선).
 6. **학습 루프(A1), 임베딩 추출, 후처리, 평가 스위트** 구현.
 7. **seed 0으로 12 run** (DINO × 4 view × 3 데이터셋, P-orig) → `results/E0/summary.md`에 §6.1 참조값 대비 차이 표.
-8. **G0 판정.** 미달 시 진단 순서: (a) 세포 수·샘플링·QC → (b) 채널 순서·정규화 → (c) 후처리(sphering fit 대상, PCA, Harmony batch key) → (d) 평가 정의(copairs 설정, 갤러리 구성).
+8. **G0 판정 (2026-10-16부터 정성 기준 Q1–Q7, `research_plan.md` §9.2).** 파이프라인은 현재 설정으로 고정하고 원문 수치에 맞추려고 바꾸지 않는다(decisions.md 2026-10-16). 아래 진단 순서는 정성 현상이 미달할 때만 쓴다: (a) 세포 수·샘플링·QC → (b) 채널 순서·정규화 → (c) 후처리(sphering fit 대상, PCA, Harmony batch key) → (d) 평가 정의(copairs 설정, 갤러리 구성).
 9. **seed 1, 2 추가** (24 run) → A1 seed 표준편차 → δ = 2 × 표준편차를 decisions.md에 고정.
 10. **P-strict validation 배치 선정** (학습 배치 중 well 수 중앙값) → decisions.md.
 11. **B200 기준 T(GPU-시간) 실측** → progress.md에 기록하고 `docs/research_plan.md` §9.3 예산 갱신을 제안한다.
