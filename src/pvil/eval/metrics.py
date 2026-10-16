@@ -17,15 +17,25 @@ def _guard(meta: pd.DataFrame, allow_test: bool) -> None:
         raise HeldOutAccessError("held-out 배치 well이 들어 있다. 최종 평가에서만 allow_test=True로 호출한다")
 
 
-def cross_batch_recall(x: np.ndarray, meta: pd.DataFrame, ks=range(1, 11), *, allow_test: bool = False) -> tuple[dict, pd.DataFrame]:
-    """쿼리 = held-out 배치의 비대조군 well, 갤러리 = 다른 배치의 비대조군 well. 코사인, perturbation 단위 macro."""
+def cross_batch_recall(x: np.ndarray, meta: pd.DataFrame, ks=range(1, 11), *, allow_test: bool = False,
+                       metric: str = "cosine") -> tuple[dict, pd.DataFrame]:
+    """쿼리 = held-out 배치의 비대조군 well, 갤러리 = 다른 배치의 비대조군 well. 코사인, perturbation 단위 macro.
+
+    metric = "euclidean"은 저차원 비이미지 베이스라인(G1–G3) 진단 전용이다. 고정 평가 정의는 코사인.
+    """
     _guard(meta, allow_test)
     ks = list(ks)
     treat = (meta.role != "control").to_numpy()
     q = treat & meta.is_heldout_batch.to_numpy()
     g = treat & ~meta.is_heldout_batch.to_numpy()
-    xn = x / np.linalg.norm(x, axis=1, keepdims=True).clip(1e-12)
-    sim = xn[q] @ xn[g].T
+    if metric == "cosine":
+        xn = x / np.linalg.norm(x, axis=1, keepdims=True).clip(1e-12)
+        sim = xn[q] @ xn[g].T
+    elif metric == "euclidean":
+        xq, xg = np.asarray(x[q], np.float64), np.asarray(x[g], np.float64)
+        sim = -((xq ** 2).sum(1)[:, None] - 2 * xq @ xg.T + (xg ** 2).sum(1)[None, :])
+    else:
+        raise ValueError(metric)
     qlab = meta.label.to_numpy()[q]
     glab = meta.label.to_numpy()[g]
     top = np.argsort(-sim, axis=1)[:, :max(ks)]

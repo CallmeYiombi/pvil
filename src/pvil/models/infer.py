@@ -12,18 +12,30 @@ from pvil.data.views import build_batch
 
 @torch.no_grad()
 def embed_cells(model, store: CropStore, idx: np.ndarray, *, view: str, dna_idx: int, size: int,
-                batch: int = 1024, device="cuda", patch: dict | None = None) -> np.ndarray:
-    """idx 순서대로 증강 없이 128차원 projection 임베딩을 낸다."""
-    model.eval()
+                batch: int = 1024, device="cuda", patch: dict | None = None, layer: str = "head") -> np.ndarray:
+    """idx 순서대로 증강 없이 임베딩을 낸다.
+
+    layer: head = 128차원 projection(고정 평가 임베딩) | cls = 백본 CLS(G0 진단 D1·D2)
+           | intensity = view 적용 전 원본 crop의 채널별 평균·표준편차(G3 근사, model 불필요)
+    """
+    if layer not in ("head", "cls", "intensity"):
+        raise ValueError(layer)
+    if model is not None:
+        model.eval()
     out = []
     for a in range(0, len(idx), batch):
         img, nuc, cell, _ = store.load(idx[a:a + batch])
+        if layer == "intensity":
+            x = img.to(device).float() / 255.0
+            out.append(torch.cat([x.mean((2, 3)), x.std((2, 3))], 1).cpu())
+            continue
         dens = torch.from_numpy(store.density[idx[a:a + batch]]).to(device)
         x = build_batch(img.to(device), nuc.to(device), cell.to(device), view=view, dna_idx=dna_idx, size=size,
                         augment=None, density=dens, patch=patch)
         with torch.autocast("cuda", dtype=torch.bfloat16):
-            out.append(model(x).float().cpu())
-    model.train()
+            out.append((model(x) if layer == "head" else model.features(x)).float().cpu())
+    if model is not None:
+        model.train()
     return torch.cat(out).numpy()
 
 
