@@ -3,7 +3,7 @@
 > 세션 시작 시 읽고, 끝내기 전에 갱신한다. 최신 항목을 위에 쓴다.
 
 - 현재 단계: Phase 0 (CP-BG-Bench 재현)
-- 마지막 갱신: 2026-10-16 10:50 UTC (E0 4 run 완료: RxRx1 C/S, RxRx3-core C/S. 4개 모두 R@10이 원문보다 +0.12–0.25 높아 G0 미달. `results/E0/summary.md` 생성. RxRx3-core mAP 정의 A–D 진단 실행 중. JUMP Stage B는 정체가 아니라 저속 진행 중 `[540/1149]`)
+- 마지막 갱신: 2026-10-16 13:05 UTC (G0 = 정성 기준 Q1–Q7, 경로 A 확정. RxRx1 CD/SD 학습 시작(GPU 1·2), RxRx3-core CD/SD는 mAP 진단 종료 후 자동 시작. G1–G3·D4 진단 대기 중. JUMP Stage B `[560/1149]`. 대기 스크립트 2개는 세션 scratchpad에 있어 서버 재생성 시 사라진다 → 그 경우 실행 중인 작업 표의 명령으로 다시 띄운다)
 - 사용자 결정(2026-10-15): 학습 시간이 길어도 E0은 계획대로 전체(36 run) 진행한다. 축소안(G0용 6 run)은 기각
 - **GPU는 1, 2번만 쓴다**(사용자 지시 2026-10-14). `scripts/env.sh`가 기본값 `CUDA_VISIBLE_DEVICES=1,2`를 설정한다
 
